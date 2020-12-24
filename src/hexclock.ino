@@ -1,13 +1,23 @@
 #include <LedControl.h>
 
-LedControl lc = LedControl(12,11,10,1);
+LedControl lc = LedControl(12,11,10,3);
 
 void setup() {
     lc.shutdown(0, true);
+    lc.shutdown(1, true);
+    lc.shutdown(2, true);
     delay(1000);
     lc.shutdown(0, false);
+    lc.shutdown(1, false);
+    lc.shutdown(2, false);
+
     lc.setIntensity(0, 8);
+    lc.setIntensity(1, 8);
+    lc.setIntensity(2, 8);
+
     lc.clearDisplay(0);
+    lc.clearDisplay(1);
+    lc.clearDisplay(2);
 }
 
 
@@ -190,50 +200,91 @@ byte fifteen[8] = {
     B01000000
 };
 
-void draw(byte pixels[8]) {
-    lc.setRow(0,0,pixels[0]);
-    lc.setRow(0,1,pixels[1]);
-    lc.setRow(0,2,pixels[2]);
-    lc.setRow(0,3,pixels[3]);
-    lc.setRow(0,4,pixels[4]);
-    lc.setRow(0,5,pixels[5]);
-    lc.setRow(0,6,pixels[6]);
-    lc.setRow(0,7,pixels[7]);
+void draw(int addr, byte pixels[8]) {
+    lc.setRow(addr,0,pixels[0]);
+    lc.setRow(addr,1,pixels[1]);
+    lc.setRow(addr,2,pixels[2]);
+    lc.setRow(addr,3,pixels[3]);
+    lc.setRow(addr,4,pixels[4]);
+    lc.setRow(addr,5,pixels[5]);
+    lc.setRow(addr,6,pixels[6]);
+    lc.setRow(addr,7,pixels[7]);
 }
 
 #define DELAY 250
 
-void loop(){
-  draw(zero);
-  delay(DELAY);
-  draw(one);
-  delay(DELAY);
-  draw(two);
-  delay(DELAY);
-  draw(three);
-  delay(DELAY);
-  draw(four);
-  delay(DELAY);
-  draw(five);
-  delay(DELAY);
-  draw(six);
-  delay(DELAY);
-  draw(seven);
-  delay(DELAY);
-  draw(eight);
-  delay(DELAY);
-  draw(nine);
-  delay(DELAY);
-  draw(ten);
-  delay(DELAY);
-  draw(eleven);
-  delay(DELAY);
-  draw(twelve);
-  delay(DELAY);
-  draw(thirteen);
-  delay(DELAY);
-  draw(fourteen);
-  delay(DELAY);
-  draw(fifteen);
-  delay(DELAY);
+unsigned long m = millis();
+
+bool transitioning = false;
+uint8_t transIndex = 0;
+
+// byte currentHour = 0;
+// byte currentMin16 = 0;
+// byte currentMin = 0;
+
+// byte prevHour = 0;
+// byte prevMin16 = 0;
+// byte prevMin = 0;
+
+void loop() {
+    // if (transitioning) {
+    //     tickTransition();
+    // }
+    if (millis() - m >= DELAY) {
+        tick();
+        m = millis();
+    }
+}
+
+// void tickTransition() {
+//     byte t[8];
+//     uint8_t ti = 0;
+//     for (int i = 0; i < 8 - (transIndex + 1); i++) {
+//         t[ti++] = getDigit();
+//     }
+// }
+
+void tick() {
+    static byte hour = 12;
+    static byte minute = 0;
+    setHour(hour);
+    setMinute(minute);
+    minute = (minute + 1) % 60;
+    if (minute == 0) {
+        hour = (hour + 1) % 12;
+        if (hour == 0) {
+            hour = 12;
+        }
+    }
+    transitioning = true;
+}
+
+void setHour(byte hour) {
+    draw(2, getDigit(hour));
+}
+
+void setMinute(byte minute) {
+    draw(1, getDigit((minute & 0xF0) >> 4));
+    draw(0, getDigit(minute & 0x0F));
+}
+
+byte* getDigit(byte digit) {
+    switch (digit) {
+        case 0: return zero;
+        case 1: return one;
+        case 2: return two;
+        case 3: return three;
+        case 4: return four;
+        case 5: return five;
+        case 6: return six;
+        case 7: return seven;
+        case 8: return eight;
+        case 9: return nine;
+        case 10: return ten;
+        case 11: return eleven;
+        case 12: return twelve;
+        case 13: return thirteen;
+        case 14: return fourteen;
+        case 15: return fifteen;
+    }
 }
