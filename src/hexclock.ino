@@ -1,8 +1,58 @@
+#include <Wire.h>
+#include <RtcDS3231.h>
 #include <LedControl.h>
 
+#define CS_HOUR 2
+#define CS_MINUTE16 1
+#define CS_MINUTE1 0
+
 LedControl lc = LedControl(12,11,10,3);
+RtcDS3231<TwoWire> rtc(Wire);
 
 void setup() {
+    pinMode(0, INPUT_PULLUP);
+    pinMode(1, INPUT_PULLUP);
+    pinMode(2, INPUT_PULLUP);
+    pinMode(3, INPUT_PULLUP);
+    pinMode(4, INPUT_PULLUP);
+    pinMode(5, INPUT_PULLUP);
+    pinMode(6, INPUT_PULLUP);
+    pinMode(7, INPUT_PULLUP);
+    pinMode(8, INPUT_PULLUP);
+    pinMode(9, INPUT_PULLUP);
+    pinMode(A0, INPUT_PULLUP);
+    pinMode(A1, INPUT_PULLUP);
+    pinMode(A2, INPUT_PULLUP);
+    pinMode(A3, INPUT_PULLUP);
+    pinMode(A6, INPUT_PULLUP);
+    pinMode(A7, INPUT_PULLUP);
+
+    Serial.begin(9600);
+
+    rtc.Begin();
+    RtcDateTime compiled = RtcDateTime(__DATE__, __TIME__);
+    Serial.println(__DATE__);
+    Serial.println(__TIME__);
+    if (!rtc.IsDateTimeValid()) {
+        Serial.println("Invalid date/time");
+        if (rtc.LastError() != 0) {
+            Serial.println("RTC Error: "+String(rtc.LastError()));
+            for(;;);
+        } else {
+            rtc.SetDateTime(compiled);
+        }
+    }
+    if (!rtc.GetIsRunning()) {
+        rtc.SetIsRunning(true);
+    }
+
+    if (rtc.GetDateTime() < compiled) {
+        rtc.SetDateTime(compiled);
+    }
+
+    rtc.SetSquareWavePin(DS3231SquareWavePin_ModeNone);
+    rtc.Enable32kHzPin(false);
+
     lc.shutdown(0, true);
     lc.shutdown(1, true);
     lc.shutdown(2, true);
@@ -18,13 +68,14 @@ void setup() {
     lc.clearDisplay(0);
     lc.clearDisplay(1);
     lc.clearDisplay(2);
+    Serial.println("setup done");
 }
 
 
 // delay time between faces
 unsigned long delaytime=1000;
 
-byte zero[8] = {
+uint8_t zero[8] = {
     B00111100,
     B01000010,
     B01000010,
@@ -35,7 +86,7 @@ byte zero[8] = {
     B00111100
 };
 
-byte one[8] = {
+uint8_t one[8] = {
     B00011000,
     B00111000,
     B01011000,
@@ -46,7 +97,7 @@ byte one[8] = {
     B01111110
 };
 
-byte two[8] = {
+uint8_t two[8] = {
     B00111100,
     B01000010,
     B00000010,
@@ -57,7 +108,7 @@ byte two[8] = {
     B01111110
 };
 
-byte three[8] = {
+uint8_t three[8] = {
     B00111100,
     B01000010,
     B00000010,
@@ -68,7 +119,7 @@ byte three[8] = {
     B00111100
 };
 
-byte four[8] = {
+uint8_t four[8] = {
     B00001100,
     B00010100,
     B00100100,
@@ -79,7 +130,7 @@ byte four[8] = {
     B00000100
 };
 
-byte five[8] = {
+uint8_t five[8] = {
     B01111110,
     B01000000,
     B01000000,
@@ -90,7 +141,7 @@ byte five[8] = {
     B00111100
 };
 
-byte six[8] = {
+uint8_t six[8] = {
     B00111100,
     B01000010,
     B01000000,
@@ -101,7 +152,7 @@ byte six[8] = {
     B00111100
 };
 
-byte seven[8] = {
+uint8_t seven[8] = {
     B01111110,
     B01000010,
     B00000110,
@@ -112,7 +163,7 @@ byte seven[8] = {
     B01000000
 };
 
-byte eight[8] = {
+uint8_t eight[8] = {
     B00111100,
     B01000010,
     B01000010,
@@ -123,7 +174,7 @@ byte eight[8] = {
     B00111100
 };
 
-byte nine[8] = {
+uint8_t nine[8] = {
     B00111100,
     B01000010,
     B01000010,
@@ -134,7 +185,7 @@ byte nine[8] = {
     B00100000
 };
 
-byte ten[8] = {
+uint8_t ten[8] = {
     B00011000,
     B00100100,
     B01000010,
@@ -145,7 +196,7 @@ byte ten[8] = {
     B01000010
 };
 
-byte eleven[8] = {
+uint8_t eleven[8] = {
     B01111100,
     B01000010,
     B01000010,
@@ -156,7 +207,7 @@ byte eleven[8] = {
     B01111100
 };
 
-byte twelve[8] = {
+uint8_t twelve[8] = {
     B00111100,
     B01000010,
     B01000000,
@@ -167,7 +218,7 @@ byte twelve[8] = {
     B00111100
 };
 
-byte thirteen[8] = {
+uint8_t thirteen[8] = {
     B01111000,
     B01000100,
     B01000010,
@@ -178,7 +229,7 @@ byte thirteen[8] = {
     B01111000
 };
 
-byte fourteen[8] = {
+uint8_t fourteen[8] = {
     B01111110,
     B01000000,
     B01000000,
@@ -189,7 +240,7 @@ byte fourteen[8] = {
     B01111110
 };
 
-byte fifteen[8] = {
+uint8_t fifteen[8] = {
     B01111110,
     B01000000,
     B01000000,
@@ -200,7 +251,7 @@ byte fifteen[8] = {
     B01000000
 };
 
-void draw(int addr, byte pixels[8]) {
+void draw(int addr, uint8_t * pixels) {
     lc.setRow(addr,0,pixels[0]);
     lc.setRow(addr,1,pixels[1]);
     lc.setRow(addr,2,pixels[2]);
@@ -211,64 +262,38 @@ void draw(int addr, byte pixels[8]) {
     lc.setRow(addr,7,pixels[7]);
 }
 
-#define DELAY 250
+#define DELAY 1000
 
-unsigned long m = millis();
-
-bool transitioning = false;
-uint8_t transIndex = 0;
-
-// byte currentHour = 0;
-// byte currentMin16 = 0;
-// byte currentMin = 0;
-
-// byte prevHour = 0;
-// byte prevMin16 = 0;
-// byte prevMin = 0;
+static uint8_t hour2 = 12;
+static uint8_t minute2 = 0;
 
 void loop() {
-    // if (transitioning) {
-    //     tickTransition();
-    // }
-    if (millis() - m >= DELAY) {
-        tick();
-        m = millis();
-    }
+    static unsigned long m = millis();
+
+    static uint8_t * hourPixels;;
+    static uint8_t * minute16Pixels;
+    static uint8_t * minute1Pixels;
+    
+    RtcDateTime now = rtc.GetDateTime();
+    Serial.println("now = " + String(now.Hour()) + ":" + String(now.Minute()));
+    uint8_t hour = now.Hour() % 12;
+    uint8_t minute = now.Minute();
+
+    uint8_t min16 = (minute & 0xF0) >> 4;
+    uint8_t min1 = minute & 0x0F;
+
+    hourPixels = getDigit(hour);
+    minute16Pixels = getDigit(min16);
+    minute1Pixels = getDigit(min1);
+
+    draw(CS_MINUTE1, minute1Pixels);
+    draw(CS_MINUTE16, minute16Pixels);
+    draw(CS_HOUR, hourPixels);
+
+    delay(500);
 }
 
-// void tickTransition() {
-//     byte t[8];
-//     uint8_t ti = 0;
-//     for (int i = 0; i < 8 - (transIndex + 1); i++) {
-//         t[ti++] = getDigit();
-//     }
-// }
-
-void tick() {
-    static byte hour = 12;
-    static byte minute = 0;
-    setHour(hour);
-    setMinute(minute);
-    minute = (minute + 1) % 60;
-    if (minute == 0) {
-        hour = (hour + 1) % 12;
-        if (hour == 0) {
-            hour = 12;
-        }
-    }
-    transitioning = true;
-}
-
-void setHour(byte hour) {
-    draw(2, getDigit(hour));
-}
-
-void setMinute(byte minute) {
-    draw(1, getDigit((minute & 0xF0) >> 4));
-    draw(0, getDigit(minute & 0x0F));
-}
-
-byte* getDigit(byte digit) {
+uint8_t* getDigit(uint8_t digit) {
     switch (digit) {
         case 0: return zero;
         case 1: return one;
