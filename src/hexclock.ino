@@ -10,6 +10,7 @@ LedControl lc = LedControl(12,11,10,3);
 RtcDS3231<TwoWire> rtc(Wire);
 
 void setup() {
+    // unused pins
     pinMode(0, INPUT_PULLUP);
     pinMode(1, INPUT_PULLUP);
     pinMode(2, INPUT_PULLUP);
@@ -261,8 +262,6 @@ void draw(int addr, uint8_t * pixels) {
     lc.setRow(addr,6,pixels[6]);
     lc.setRow(addr,7,pixels[7]);
 }
-
-#define DELAY 1000
 
 static uint8_t hour2 = 12;
 static uint8_t minute2 = 0;
