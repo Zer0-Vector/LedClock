@@ -11,6 +11,9 @@
 RtcDS3231<TwoWire> rtc(Wire);
 ClockDisplay disp = ClockDisplay(12, 11, 10);
 
+static uint8_t lastHour = 12;
+static uint8_t lastMinute = 0;
+
 void setup() {
     // unused pins
     pinMode(0, INPUT_PULLUP);
@@ -58,6 +61,10 @@ void setup() {
 
     disp.begin();
 
+    RtcDateTime now = rtc.GetDateTime();
+    lastHour = now.Hour();
+    lastMinute = now.Minute();
+
     Serial.println("setup done");
 }
 
@@ -65,8 +72,10 @@ void setup() {
 // delay time between faces
 unsigned long delaytime=1000;
 
-static uint8_t hour2 = 12;
-static uint8_t minute2 = 0;
+static bool hourTrans = false;
+static bool min16Trans = false;
+static bool min1Trans = false;
+static uint16_t transIndex = 8;
 
 void loop() {
     static unsigned long m = millis();
@@ -80,12 +89,61 @@ void loop() {
     uint8_t hour = now.Hour() % 12;
     uint8_t minute = now.Minute();
 
+    if (transIndex >= 8) {
+        min1Trans = false;
+        min16Trans = false;
+        hourTrans = false;
+    }
+
+    if (minute != lastMinute) {
+        min1Trans = true;
+        min16Trans = (minute & 0xF0) != (lastMinute & 0xF0);
+        hourTrans = hour != lastHour;
+        transIndex = 0;
+        Serial.println("transitioning ");
+    }
+
     uint8_t min16 = (minute & 0xF0) >> 4;
     uint8_t min1 = minute & 0x0F;
 
-    disp.showDigit(CS_MINUTE1, min1);
-    disp.showDigit(CS_MINUTE16, min16);
-    disp.showDigit(CS_HOUR, hour);
+    uint8_t pmin = getPrevMinute(minute);
+    if (min1Trans) {
+        disp.showTransition(CS_MINUTE1, transIndex, min1, pmin & 0x0F);
+    } else {
+        disp.showDigit(CS_MINUTE1, min1);
+    }
 
-    delay(500);
+    if (min16Trans) {
+        disp.showTransition(CS_MINUTE16, transIndex, min16, (pmin & 0xF0) >> 4);
+    } else {
+        disp.showDigit(CS_MINUTE16, min16);
+    }
+    
+    if (hourTrans) {
+        disp.showTransition(CS_HOUR, transIndex, hour, getPrevHour(hour));
+    } else {
+        disp.showDigit(CS_HOUR, hour);
+    }
+    transIndex++;
+    lastMinute = minute;
+    lastHour = hour;
+    delay(100);
+}
+
+uint8_t getPrevHour(uint8_t currentHour) {
+    uint8_t rval = (currentHour - 1) % 12;
+    if (rval == 0) {
+        return 12;
+    } else {
+        return rval;
+    }
+}
+
+uint8_t getPrevMinute(uint8_t currentMinute) {
+    int rval = currentMinute - 1;
+    if (rval < 0) {
+        return 59;
+    } else {
+        return rval;
+    }
 }
