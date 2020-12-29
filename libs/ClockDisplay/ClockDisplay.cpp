@@ -23,29 +23,29 @@ void ClockDisplay::dim() {
 }
 
 void ClockDisplay::begin() {
-    _ledctrl->clearDisplay(0);
-    _ledctrl->clearDisplay(1);
-    _ledctrl->clearDisplay(2);
+    _ledctrl->clearDisplay(CS_HOUR);
+    _ledctrl->clearDisplay(CS_MINUTE16);
+    _ledctrl->clearDisplay(CS_MINUTE1);
 
-    _ledctrl->shutdown(0, true);
-    _ledctrl->shutdown(1, true);
-    _ledctrl->shutdown(2, true);
+    _ledctrl->shutdown(CS_HOUR, true);
+    _ledctrl->shutdown(CS_MINUTE16, true);
+    _ledctrl->shutdown(CS_MINUTE1, true);
     delay(1000);
-    _ledctrl->shutdown(0, false);
-    _ledctrl->shutdown(1, false);
-    _ledctrl->shutdown(2, false);
+    _ledctrl->shutdown(CS_HOUR, false);
+    _ledctrl->shutdown(CS_MINUTE16, false);
+    _ledctrl->shutdown(CS_MINUTE1, false);
 
     _updateBrightness();
 
-    _ledctrl->clearDisplay(0);
-    _ledctrl->clearDisplay(1);
-    _ledctrl->clearDisplay(2);
+    _ledctrl->clearDisplay(CS_HOUR);
+    _ledctrl->clearDisplay(CS_MINUTE16);
+    _ledctrl->clearDisplay(CS_MINUTE1);
 }
 
 void ClockDisplay::_updateBrightness() {
-    _ledctrl->setIntensity(0, _brightness);
-    _ledctrl->setIntensity(1, _brightness);
-    _ledctrl->setIntensity(2, _brightness);
+    _ledctrl->setIntensity(CS_HOUR, _brightness);
+    _ledctrl->setIntensity(CS_MINUTE16, _brightness);
+    _ledctrl->setIntensity(CS_MINUTE1, _brightness);
 }
 
 void ClockDisplay::showDigit(uint8_t pos, uint8_t digit) {
