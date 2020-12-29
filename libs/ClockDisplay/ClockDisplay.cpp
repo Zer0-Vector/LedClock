@@ -10,6 +10,10 @@ ClockDisplay::~ClockDisplay() {
     delete _ledctrl;
 }
 
+void ClockDisplay::clear(uint8_t pos) {
+    _ledctrl->clearDisplay(pos);
+}
+
 void ClockDisplay::brighten() {
     // increment and check upper limit
     if (++_brightness > 15) _brightness = 15;
