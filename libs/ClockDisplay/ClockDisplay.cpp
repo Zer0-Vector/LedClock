@@ -48,12 +48,12 @@ void ClockDisplay::showTransition(uint8_t pos, uint8_t index, uint8_t nextDigit,
     const uint8_t * currentPixels = _getDigitMatrix(currentDigit);
     // index should be in [0,8)
     _ledctrl->setRow(pos, 0, nextPixels[7 - index]);
-    _ledctrl->setRow(pos, 1, index < 1 ? currentPixels[0] : nextPixels[6 - index]);
-    _ledctrl->setRow(pos, 2, index < 2 ? currentPixels[1 - index] : nextPixels[5 - index]);
-    _ledctrl->setRow(pos, 3, index < 3 ? currentPixels[2 - index] : nextPixels[4 - index]);
-    _ledctrl->setRow(pos, 4, index < 4 ? currentPixels[3 - index] : nextPixels[3 - index]);
-    _ledctrl->setRow(pos, 5, index < 5 ? currentPixels[4 - index] : nextPixels[2 - index]);
-    _ledctrl->setRow(pos, 6, index < 6 ? currentPixels[5 - index] : nextPixels[1 - index]);
+    _ledctrl->setRow(pos, 1, index < 1 ? currentPixels[0] : nextPixels[8 - index]);
+    _ledctrl->setRow(pos, 2, index < 2 ? currentPixels[1 - index] : nextPixels[9 - index]);
+    _ledctrl->setRow(pos, 3, index < 3 ? currentPixels[2 - index] : nextPixels[10 - index]);
+    _ledctrl->setRow(pos, 4, index < 4 ? currentPixels[3 - index] : nextPixels[11 - index]);
+    _ledctrl->setRow(pos, 5, index < 5 ? currentPixels[4 - index] : nextPixels[12 - index]);
+    _ledctrl->setRow(pos, 6, index < 6 ? currentPixels[5 - index] : nextPixels[13 - index]);
     _ledctrl->setRow(pos, 7, index < 7 ? currentPixels[6 - index] : nextPixels[7]);
 }
 
