@@ -3,10 +3,23 @@
 
 ClockDisplay::ClockDisplay(int dataPin, int clockPin, int csPin) {
     _ledctrl = new LedControl(dataPin, clockPin, csPin, 3);
+    _brightness = 0;
 }
 
 ClockDisplay::~ClockDisplay() {
     delete _ledctrl;
+}
+
+void ClockDisplay::brighten() {
+    // increment and check upper limit
+    if (++_brightness > 15) _brightness = 15;
+    _updateBrightness();
+}
+
+void ClockDisplay::dim() {
+    // decrement and check lower limit
+    if (--_brightness < 0) _brightness = 0;
+    _updateBrightness();
 }
 
 void ClockDisplay::begin() {
@@ -22,13 +35,17 @@ void ClockDisplay::begin() {
     _ledctrl->shutdown(1, false);
     _ledctrl->shutdown(2, false);
 
-    _ledctrl->setIntensity(0, 0);
-    _ledctrl->setIntensity(1, 0);
-    _ledctrl->setIntensity(2, 0);
+    _updateBrightness();
 
     _ledctrl->clearDisplay(0);
     _ledctrl->clearDisplay(1);
     _ledctrl->clearDisplay(2);
+}
+
+void ClockDisplay::_updateBrightness() {
+    _ledctrl->setIntensity(0, _brightness);
+    _ledctrl->setIntensity(1, _brightness);
+    _ledctrl->setIntensity(2, _brightness);
 }
 
 void ClockDisplay::showDigit(uint8_t pos, uint8_t digit) {

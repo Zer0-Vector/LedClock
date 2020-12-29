@@ -10,10 +10,14 @@ class ClockDisplay {
         void begin();
         void showDigit(uint8_t pos, uint8_t digit);
         void showTransition(uint8_t pos, uint8_t index, uint8_t nextDigit, uint8_t currentDigit);
+        void brighten();
+        void dim();
     private:
         const uint8_t * _getDigitMatrix(uint8_t digit);
+        void _updateBrightness();
         
         LedControl * _ledctrl;
+        uint8_t _brightness;
 
         static const uint8_t c_zero[];
         static const uint8_t c_one[];
