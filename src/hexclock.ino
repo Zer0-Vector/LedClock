@@ -87,6 +87,9 @@ void loop() {
     RtcDateTime now = rtc.GetDateTime();
     Serial.println("now = " + String(now.Hour()) + ":" + String(now.Minute()));
     uint8_t hour = now.Hour() % 12;
+    if (hour == 0) {
+        hour = 12;
+    }
     uint8_t minute = now.Minute();
 
     if (transIndex >= 8) {
