@@ -13,6 +13,7 @@ class ClockDisplay {
         ~ClockDisplay();
         void begin();
         void showDigit(uint8_t pos, uint8_t digit);
+        void clear(uint8_t pos);
         void showTransition(uint8_t pos, uint8_t index, uint8_t nextDigit, uint8_t currentDigit);
         void brighten();
         void dim();
