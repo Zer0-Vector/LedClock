@@ -1,12 +1,7 @@
 #include <Wire.h>
 #include <RtcDS3231.h>
-// #include <LedControl.h>
 
 #include "ClockDisplay.h"
-
-#define CS_HOUR 2
-#define CS_MINUTE16 1
-#define CS_MINUTE1 0
 
 RtcDS3231<TwoWire> rtc(Wire);
 ClockDisplay disp = ClockDisplay(12, 11, 10);
