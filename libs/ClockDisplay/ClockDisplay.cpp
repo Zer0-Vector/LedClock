@@ -7,7 +7,7 @@ ClockDisplay::ClockDisplay(int dataPin, int clockPin, int csPin) {
     _brightness = 0;
     _currentDisplay = (char*)calloc(3, sizeof(char));
     _currentDisplay[CS_MINUTE1] = ' ';
-    _currentDisplay[CS_MINUTE16] = ' ';
+    _currentDisplay[CS_MINUTE15] = ' ';
     _currentDisplay[CS_HOUR] = ' ';
 }
 
@@ -35,27 +35,27 @@ void ClockDisplay::dim() {
 
 void ClockDisplay::begin() {
     _ledctrl->clearDisplay(CS_HOUR);
-    _ledctrl->clearDisplay(CS_MINUTE16);
+    _ledctrl->clearDisplay(CS_MINUTE15);
     _ledctrl->clearDisplay(CS_MINUTE1);
 
     _ledctrl->shutdown(CS_HOUR, true);
-    _ledctrl->shutdown(CS_MINUTE16, true);
+    _ledctrl->shutdown(CS_MINUTE15, true);
     _ledctrl->shutdown(CS_MINUTE1, true);
     delay(1000);
     _ledctrl->shutdown(CS_HOUR, false);
-    _ledctrl->shutdown(CS_MINUTE16, false);
+    _ledctrl->shutdown(CS_MINUTE15, false);
     _ledctrl->shutdown(CS_MINUTE1, false);
 
     _updateBrightness();
 
     clear(CS_HOUR);
-    clear(CS_MINUTE16);
+    clear(CS_MINUTE15);
     clear(CS_MINUTE1);
 }
 
 void ClockDisplay::_updateBrightness() {
     _ledctrl->setIntensity(CS_HOUR, _brightness);
-    _ledctrl->setIntensity(CS_MINUTE16, _brightness);
+    _ledctrl->setIntensity(CS_MINUTE15, _brightness);
     _ledctrl->setIntensity(CS_MINUTE1, _brightness);
 }
 

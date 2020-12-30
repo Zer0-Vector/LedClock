@@ -161,7 +161,7 @@ void loop() {
         case INVALID_TIME:
             if (!blinkOn) {
                 disp.clear(CS_HOUR);
-                disp.clear(CS_MINUTE16);
+                disp.clear(CS_MINUTE15);
                 disp.clear(CS_MINUTE1);
             } else {
                 showTime();
@@ -175,8 +175,8 @@ void loop() {
             showTemp();
             break;
         case SET_HOUR:
-            disp.showDigit(CS_MINUTE16, (settingMinute & 0xF0) >> 4);
-            disp.showDigit(CS_MINUTE1, (settingMinute & 0x0F));
+            disp.showDigit(CS_MINUTE15, (settingMinute / 15));
+            disp.showDigit(CS_MINUTE1, (settingMinute % 15));
             if (blinkOn) {
                 disp.showDigit(CS_HOUR, settingHour);
             } else {
@@ -190,10 +190,10 @@ void loop() {
         case SET_MINUTE:
             disp.showDigit(CS_HOUR, settingHour);
             if (blinkOn) {
-                disp.showDigit(CS_MINUTE16, (settingMinute & 0xF0) >> 4);
-                disp.showDigit(CS_MINUTE1, (settingMinute & 0x0F));
+                disp.showDigit(CS_MINUTE15, settingMinute / 15);
+                disp.showDigit(CS_MINUTE1, settingMinute % 15);
             } else {
-                disp.clear(CS_MINUTE16);
+                disp.clear(CS_MINUTE15);
                 disp.clear(CS_MINUTE1);
             }
             if (millis() - lastBlink > 250) {
@@ -256,7 +256,7 @@ void showTemp() {
 
     // in base 10
     disp.showCharacter(CS_HOUR, 'T');
-    disp.showDigit(CS_MINUTE16, tinf / 10);
+    disp.showDigit(CS_MINUTE15, tinf / 10);
     disp.showDigit(CS_MINUTE1, tinf % 10);
 }
 
@@ -273,13 +273,13 @@ void showTime() {
 
     if (minute != lastMinute) {
         min1Trans = true;
-        min16Trans = (minute & 0xF0) != (lastMinute & 0xF0);
+        min16Trans = (minute / 15) != (lastMinute / 15);
         hourTrans = hour != lastHour;
         transIndex = 0;
     }
 
-    uint8_t min16 = (minute & 0xF0) >> 4;
-    uint8_t min1 = minute & 0x0F;
+    uint8_t min15 = (minute / 15);
+    uint8_t min1 = minute % 15;
 
     if (min1Trans) {
         disp.showTransition(CS_MINUTE1, transIndex, min1);
@@ -288,9 +288,9 @@ void showTime() {
     }
 
     if (min16Trans) {
-        disp.showTransition(CS_MINUTE16, transIndex, min16);
+        disp.showTransition(CS_MINUTE15, transIndex, min15);
     } else {
-        disp.showDigit(CS_MINUTE16, min16);
+        disp.showDigit(CS_MINUTE15, min15);
     }
     
     if (hourTrans) {
