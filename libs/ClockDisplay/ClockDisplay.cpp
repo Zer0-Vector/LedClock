@@ -89,7 +89,6 @@ void ClockDisplay::showCharTransition(uint8_t pos, uint8_t index, char next) {
             : _getCharRow(next, 8 - index + i)
             );
     }
-
 }
 
 uint8_t ClockDisplay::_getCharRow(char c, uint8_t row) {
@@ -111,6 +110,14 @@ uint8_t ClockDisplay::_getCharRow(char c, uint8_t row) {
         case 'D': return pgm_read_byte_near(c_thirteen + row);
         case 'E': return pgm_read_byte_near(c_fourteen + row);
         case 'F': return pgm_read_byte_near(c_fifteen + row);
+        case 'G': return pgm_read_byte_near(c_sixteen + row);
+        case 'H': return pgm_read_byte_near(c_seventeen + row);
+        case 'H': return pgm_read_byte_near(c_eighteen + row);
+        case 'J': return pgm_read_byte_near(c_nineteen + row);
+        case 'K': return pgm_read_byte_near(c_twenty + row);
+        case 'L': return pgm_read_byte_near(c_twentyone + row);
+        case 'M': return pgm_read_byte_near(c_twentytwo + row);
+        case 'N': return pgm_read_byte_near(c_twentythree + row);
         case 'T': return pgm_read_byte_near(c_T + row);
     }
 }

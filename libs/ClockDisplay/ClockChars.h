@@ -178,6 +178,102 @@ const PROGMEM uint8_t ClockDisplay::c_fifteen[8] = {
     B01000000
 };
 
+// G
+const PROGMEM uint8_t ClockDisplay::c_sixteen[8] = {
+    B00111100,
+    B01000010,
+    B01000000,
+    B01000000,
+    B01011110,
+    B01000100,
+    B01000100,
+    B00111000
+};
+
+// H
+const PROGMEM uint8_t ClockDisplay::c_seventeen[8] = {
+    B01000010,
+    B01000010,
+    B01000010,
+    B01111110,
+    B01000010,
+    B01000010,
+    B01000010,
+    B01000010
+};
+
+// I
+const PROGMEM uint8_t ClockDisplay::c_eighteen[8] = {
+    B01111110,
+    B00011000,
+    B00011000,
+    B00011000,
+    B00011000,
+    B00011000,
+    B00011000,
+    B01111110
+};
+
+// J
+const PROGMEM uint8_t ClockDisplay::c_nineteen[8] = {
+    B00111110,
+    B00000100,
+    B00000100,
+    B00000100,
+    B00000100,
+    B00000100,
+    B01000100,
+    B00111000
+};
+
+// K
+const PROGMEM uint8_t ClockDisplay::c_twenty[8] = {
+    B01100010,
+    B01100100,
+    B01101000,
+    B01110000,
+    B01110000,
+    B01101000,
+    B01100100,
+    B01100010
+};
+
+// L
+const PROGMEM uint8_t ClockDisplay::c_twentyone[8] = {
+    B01000000,
+    B01000000,
+    B01000000,
+    B01000000,
+    B01000000,
+    B01000000,
+    B01000000,
+    B01111110
+};
+
+// M
+const PROGMEM uint8_t ClockDisplay::c_twentytwo[8] = {
+    B01000010,
+    B01100110,
+    B01100110,
+    B01011010,
+    B01000010,
+    B01000010,
+    B01000010,
+    B01000010
+};
+
+// N
+const PROGMEM uint8_t ClockDisplay::c_twentythree[8] = {
+    B01000010,
+    B01100010,
+    B01100010,
+    B01010010,
+    B01001010,
+    B01000110,
+    B01000110,
+    B01000010
+};
+
 const PROGMEM uint8_t ClockDisplay::c_T[8] = {
     B01111110,
     B00011000,
