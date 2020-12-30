@@ -185,9 +185,9 @@ const PROGMEM uint8_t ClockDisplay::c_sixteen[8] = {
     B01000000,
     B01000000,
     B01011110,
-    B01000100,
-    B01000100,
-    B00111000
+    B01000010,
+    B01000010,
+    B00111100
 };
 
 // H
@@ -228,14 +228,14 @@ const PROGMEM uint8_t ClockDisplay::c_nineteen[8] = {
 
 // K
 const PROGMEM uint8_t ClockDisplay::c_twenty[8] = {
-    B01100010,
-    B01100100,
-    B01101000,
+    B01000010,
+    B01000100,
+    B01001000,
     B01110000,
     B01110000,
-    B01101000,
-    B01100100,
-    B01100010
+    B01001000,
+    B01000100,
+    B01000010
 };
 
 // L
