@@ -5,7 +5,7 @@
 
 static RtcDS3231<TwoWire> rtc = RtcDS3231<TwoWire>(Wire);
 static ClockDisplay disp = ClockDisplay(12, 11, 10);
-static uint8_t lastHour = 12;
+static uint8_t lastHour = 0;
 static uint8_t lastMinute = 0;
 
 #define PIN_TEMP 2
@@ -105,7 +105,6 @@ void loop() {
         setHeld = true;
     } else if (reading == setDown && !setDown) {
         if (setHeld) {
-            // BUTTON PRESSED!
             Serial.println(F("setUp!"));
             switch (state) {
                 case INVALID_TIME:
@@ -131,8 +130,14 @@ void loop() {
             case SET_HOUR:
                 if (scanForPlus()) {
                     settingHour++;
+                    if (settingHour > 23) {
+                        settingHour = 0;
+                    }
                 } else if (scanForMinus()) {
                     settingHour--;
+                    if (settingHour < 0) {
+                        settingHour = 23;
+                    }
                 }
                 break;
             case SET_MINUTE:
@@ -257,10 +262,7 @@ void showTemp() {
 
 void showTime() {
     RtcDateTime now = rtc.GetDateTime();
-    uint8_t hour = now.Hour() % 12;
-    if (hour == 0) {
-        hour = 12;
-    }
+    uint8_t hour = now.Hour() % 24;
     uint8_t minute = now.Minute();
 
     if (transIndex >= 8) {

@@ -45,6 +45,14 @@ class ClockDisplay {
         static const uint8_t c_thirteen[];
         static const uint8_t c_fourteen[];
         static const uint8_t c_fifteen[];
+        static const uint8_t c_sixteen[];
+        static const uint8_t c_seventeen[];
+        static const uint8_t c_eighteen[];
+        static const uint8_t c_nineteen[];
+        static const uint8_t c_twenty[];
+        static const uint8_t c_twentyone[];
+        static const uint8_t c_twentytwo[];
+        static const uint8_t c_twentythree[];
         static const uint8_t c_T[];
         static const uint8_t c_blank[];
 };
