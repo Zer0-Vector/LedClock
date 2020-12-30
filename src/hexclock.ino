@@ -26,8 +26,8 @@ enum ClockState {
 void setup() {
     pinMode(PIN_TEMP, INPUT);
     pinMode(PIN_SET, INPUT);
-    pinMode(PIN_PLUS, INPUT_PULLUP);
-    pinMode(PIN_MINUS, INPUT_PULLUP);
+    pinMode(PIN_PLUS, INPUT);
+    pinMode(PIN_MINUS, INPUT);
 
     // unused pins
     pinMode(0, INPUT_PULLUP);
