@@ -13,6 +13,16 @@ static uint8_t lastMinute = 0;
 #define PIN_PLUS 4
 #define PIN_MINUS 5
 
+enum ClockState {
+    SHOW_TIME,
+    SHOW_TEMP,
+    SET_HOUR,
+    SET_MINUTE,
+    SET_ALARM_HOUR,
+    SET_ALARM_MINUTE,
+    INVALID_TIME
+} state;
+
 void setup() {
     pinMode(PIN_TEMP, INPUT);
     pinMode(PIN_SET, INPUT);
@@ -36,25 +46,20 @@ void setup() {
     Serial.begin(9600);
 
     rtc.Begin();
-    RtcDateTime compiled = RtcDateTime(__DATE__, __TIME__);
-    Serial.println(__DATE__);
-    Serial.println(__TIME__);
     if (!rtc.IsDateTimeValid()) {
+        state = INVALID_TIME;
         Serial.println(F("Invalid date/time"));
         if (rtc.LastError() != 0) {
             Serial.print(F("RTC Error: "));
             Serial.println(rtc.LastError());
             for(;;);
-        } else {
-            rtc.SetDateTime(compiled);
         }
-    }
-    if (!rtc.GetIsRunning()) {
-        rtc.SetIsRunning(true);
+    } else {
+        state = SHOW_TIME;
     }
 
-    if (rtc.GetDateTime() < compiled) {
-        rtc.SetDateTime(compiled);
+    if (!rtc.GetIsRunning()) {
+        rtc.SetIsRunning(true);
     }
 
     rtc.SetSquareWavePin(DS3231SquareWavePin_ModeNone);
@@ -75,21 +80,10 @@ static bool min16Trans = false;
 static bool min1Trans = false;
 static uint16_t transIndex = 8;
 
-enum ClockState {
-    SHOW_TIME,
-    SHOW_TEMP,
-    SET_HOUR,
-    SET_MINUTE,
-    SET_ALARM_HOUR,
-    SET_ALARM_MINUTE
-} state;
-
 void loop() {
     static bool tempDown = false;
     static bool setDown = false;
     static bool setHeld = false;
-    static bool plusDown = false;
-    static bool minusDown = false;
 
     static int8_t settingHour = 0;
     static int8_t settingMinute = 60;
@@ -114,6 +108,7 @@ void loop() {
             // BUTTON PRESSED!
             Serial.println(F("setUp!"));
             switch (state) {
+                case INVALID_TIME:
                 case SHOW_TIME:
                     state = SET_HOUR;
                     settingHour = rtc.GetDateTime().Hour();
@@ -158,17 +153,41 @@ void loop() {
     setDown = reading;
 
     switch (state) {
+        case INVALID_TIME:
+            if (!blinkOn) {
+                disp.clear(CS_HOUR);
+                disp.clear(CS_MINUTE16);
+                disp.clear(CS_MINUTE1);
+            } else {
+                showTime();
+            }
+            if (millis() - lastBlink > 250) {
+                lastBlink = millis();
+                blinkOn = !blinkOn;
+            }
+            break;
         case SHOW_TEMP:
             showTemp();
             break;
         case SET_HOUR:
-        case SET_MINUTE:
+            disp.showDigit(CS_MINUTE16, (settingMinute & 0xF0) >> 4);
+            disp.showDigit(CS_MINUTE1, (settingMinute & 0x0F));
             if (blinkOn) {
                 disp.showDigit(CS_HOUR, settingHour);
+            } else {
+                disp.clear(CS_HOUR);
+            }
+            if (millis() - lastBlink > 250) {
+                lastBlink = millis();
+                blinkOn = !blinkOn;
+            }
+            break;
+        case SET_MINUTE:
+            disp.showDigit(CS_HOUR, settingHour);
+            if (blinkOn) {
                 disp.showDigit(CS_MINUTE16, (settingMinute & 0xF0) >> 4);
                 disp.showDigit(CS_MINUTE1, (settingMinute & 0x0F));
             } else {
-                disp.clear(CS_HOUR);
                 disp.clear(CS_MINUTE16);
                 disp.clear(CS_MINUTE1);
             }
@@ -185,15 +204,43 @@ void loop() {
 }
 
 void saveSetTime(uint8_t h, uint8_t m) {
-    // TODO
+    const RtcDateTime now = rtc.GetDateTime();
+    const RtcDateTime set = RtcDateTime(now.Year(), now.Month(), now.Day(), h, m, 0);
+    rtc.SetDateTime(set);
 }
 
 bool scanForPlus() {
-    return false; // TODO
+    static bool plusDown = false;
+    static bool plusHeld = false;
+    bool reading = digitalRead(PIN_PLUS) == HIGH;
+    bool rval = false;
+    if (reading == plusDown && plusDown) {
+        plusHeld = true;
+    } else if (reading == plusDown && !plusDown) {
+        if (plusHeld) {
+            plusHeld = false;
+            rval = true;
+        }
+    }
+    plusDown = reading;
+    return rval;
 }
 
 bool scanForMinus() {
-    return false; // TODO
+    static bool minusDown = false;
+    static bool minusHeld = false;
+    bool reading = digitalRead(PIN_MINUS) == HIGH;
+    bool rval = false;
+    if (reading == minusDown && minusDown) {
+        minusHeld = true;
+    } else if (reading == minusDown && !minusDown) {
+        if (minusHeld) {
+            minusHeld = false;
+            rval = true;
+        }
+    }
+    minusDown = reading;
+    return rval;
 }
 
 void showTemp() {
