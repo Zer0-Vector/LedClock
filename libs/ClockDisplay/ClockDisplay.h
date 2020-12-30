@@ -13,16 +13,21 @@ class ClockDisplay {
         ~ClockDisplay();
         void begin();
         void showDigit(uint8_t pos, uint8_t digit);
+        void showCharacter(uint8_t pos, char c);
         void clear(uint8_t pos);
-        void showTransition(uint8_t pos, uint8_t index, uint8_t nextDigit, uint8_t currentDigit);
+        void showTransition(uint8_t pos, uint8_t index, uint8_t nextDigit);
+        void showCharTransition(uint8_t pos, uint8_t index, char next);
         void brighten();
         void dim();
+        static char digitToChar(uint8_t d);
     private:
-        const uint8_t * _getDigitMatrix(uint8_t digit);
+        uint8_t _getCharRow(char c, uint8_t row);
         void _updateBrightness();
         
         LedControl * _ledctrl;
         uint8_t _brightness;
+
+        char * _currentDisplay;
 
         static const uint8_t c_zero[];
         static const uint8_t c_one[];
@@ -40,4 +45,6 @@ class ClockDisplay {
         static const uint8_t c_thirteen[];
         static const uint8_t c_fourteen[];
         static const uint8_t c_fifteen[];
+        static const uint8_t c_T[];
+        static const uint8_t c_blank[];
 };

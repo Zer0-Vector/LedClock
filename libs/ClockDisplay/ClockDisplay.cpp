@@ -1,17 +1,24 @@
 #include "ClockDisplay.h"
 #include "ClockChars.h"
+#include <avr/pgmspace.h>
 
 ClockDisplay::ClockDisplay(int dataPin, int clockPin, int csPin) {
     _ledctrl = new LedControl(dataPin, clockPin, csPin, 3);
     _brightness = 0;
+    _currentDisplay = (char*)calloc(3, sizeof(char));
+    _currentDisplay[CS_MINUTE1] = ' ';
+    _currentDisplay[CS_MINUTE16] = ' ';
+    _currentDisplay[CS_HOUR] = ' ';
 }
 
 ClockDisplay::~ClockDisplay() {
+    free(_currentDisplay);
     delete _ledctrl;
 }
 
 void ClockDisplay::clear(uint8_t pos) {
     _ledctrl->clearDisplay(pos);
+    _currentDisplay[pos] = ' ';
 }
 
 void ClockDisplay::brighten() {
@@ -41,9 +48,9 @@ void ClockDisplay::begin() {
 
     _updateBrightness();
 
-    _ledctrl->clearDisplay(CS_HOUR);
-    _ledctrl->clearDisplay(CS_MINUTE16);
-    _ledctrl->clearDisplay(CS_MINUTE1);
+    clear(CS_HOUR);
+    clear(CS_MINUTE16);
+    clear(CS_MINUTE1);
 }
 
 void ClockDisplay::_updateBrightness() {
@@ -53,48 +60,57 @@ void ClockDisplay::_updateBrightness() {
 }
 
 void ClockDisplay::showDigit(uint8_t pos, uint8_t digit) {
-    const uint8_t * pixels = _getDigitMatrix(digit);
-    _ledctrl->setRow(pos, 0, pixels[0]);
-    _ledctrl->setRow(pos, 1, pixels[1]);
-    _ledctrl->setRow(pos, 2, pixels[2]);
-    _ledctrl->setRow(pos, 3, pixels[3]);
-    _ledctrl->setRow(pos, 4, pixels[4]);
-    _ledctrl->setRow(pos, 5, pixels[5]);
-    _ledctrl->setRow(pos, 6, pixels[6]);
-    _ledctrl->setRow(pos, 7, pixels[7]);
+    showCharacter(pos, digitToChar(digit));
 }
 
-void ClockDisplay::showTransition(uint8_t pos, uint8_t index, uint8_t nextDigit, uint8_t currentDigit) {
-    const uint8_t * nextPixels = _getDigitMatrix(nextDigit);
-    const uint8_t * currentPixels = _getDigitMatrix(currentDigit);
-    // index should be in [0,8)
-    _ledctrl->setRow(pos, 0, nextPixels[7 - index]);
-    _ledctrl->setRow(pos, 1, index < 1 ? currentPixels[0] : nextPixels[8 - index]);
-    _ledctrl->setRow(pos, 2, index < 2 ? currentPixels[1 - index] : nextPixels[9 - index]);
-    _ledctrl->setRow(pos, 3, index < 3 ? currentPixels[2 - index] : nextPixels[10 - index]);
-    _ledctrl->setRow(pos, 4, index < 4 ? currentPixels[3 - index] : nextPixels[11 - index]);
-    _ledctrl->setRow(pos, 5, index < 5 ? currentPixels[4 - index] : nextPixels[12 - index]);
-    _ledctrl->setRow(pos, 6, index < 6 ? currentPixels[5 - index] : nextPixels[13 - index]);
-    _ledctrl->setRow(pos, 7, index < 7 ? currentPixels[6 - index] : nextPixels[7]);
+char ClockDisplay::digitToChar(uint8_t d) {
+    if (d < 10) {
+        return '0' + d;
+    } else {
+        return 'A' + (d - 10);
+    }
 }
 
-const uint8_t * ClockDisplay::_getDigitMatrix(uint8_t digit) {
-    switch (digit) {
-        case 0: return c_zero;
-        case 1: return c_one;
-        case 2: return c_two;
-        case 3: return c_three;
-        case 4: return c_four;
-        case 5: return c_five;
-        case 6: return c_six;
-        case 7: return c_seven;
-        case 8: return c_eight;
-        case 9: return c_nine;
-        case 10: return c_ten;
-        case 11: return c_eleven;
-        case 12: return c_twelve;
-        case 13: return c_thirteen;
-        case 14: return c_fourteen;
-        case 15: return c_fifteen;
+void ClockDisplay::showCharacter(uint8_t pos, char c) {
+    for (int i = 0; i < 8; i++) {
+        _ledctrl->setRow(pos, i, _getCharRow(c, i));
+    }
+    _currentDisplay[pos] = c;
+}
+
+void ClockDisplay::showTransition(uint8_t pos, uint8_t index, uint8_t nextDigit) {
+    showCharTransition(pos, index, digitToChar(nextDigit));
+}
+
+void ClockDisplay::showCharTransition(uint8_t pos, uint8_t index, char next) {
+    for (int i = 0; i < 8; i++) {
+        _ledctrl->setRow(pos, i, index < i 
+            ? _getCharRow(_currentDisplay[pos], i - 1 - index) 
+            : _getCharRow(next, 8 - index + i)
+            );
+    }
+
+}
+
+uint8_t ClockDisplay::_getCharRow(char c, uint8_t row) {
+    switch (c) {
+        case ' ': return pgm_read_byte_near(c_blank + row);
+        case '0': return pgm_read_byte_near(c_zero + row);
+        case '1': return pgm_read_byte_near(c_one + row);
+        case '2': return pgm_read_byte_near(c_two + row);
+        case '3': return pgm_read_byte_near(c_three + row);
+        case '4': return pgm_read_byte_near(c_four + row);
+        case '5': return pgm_read_byte_near(c_five + row);
+        case '6': return pgm_read_byte_near(c_six + row);
+        case '7': return pgm_read_byte_near(c_seven + row);
+        case '8': return pgm_read_byte_near(c_eight + row);
+        case '9': return pgm_read_byte_near(c_nine + row);
+        case 'A': return pgm_read_byte_near(c_ten + row);
+        case 'B': return pgm_read_byte_near(c_eleven + row);
+        case 'C': return pgm_read_byte_near(c_twelve + row);
+        case 'D': return pgm_read_byte_near(c_thirteen + row);
+        case 'E': return pgm_read_byte_near(c_fourteen + row);
+        case 'F': return pgm_read_byte_near(c_fifteen + row);
+        case 'T': return pgm_read_byte_near(c_T + row);
     }
 }
