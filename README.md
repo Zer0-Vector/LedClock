@@ -9,10 +9,13 @@ A fairly simple implementation of a digital clock using the Arduino Nano. There 
 ## Non-standard digit base
 I was constrained to using three 8x8 LED matrixes, so I altered the base for the hour and minutes:
 * Hour is one digit in base 24 (0 - N).
-* Minute is two digits in base 15 (0 - E).
+* Minute is two "digits" in base 15 (0 - E).
+    * The 15s digit is represented by a circle with the current quarter hour filled in, as if it was a mechanical clock face.
 
 ### Why base 15?
 Originally, this was a hexadecimal clock. After some thought, I wanted to try base 15 since the 15s digit would represent the current quarter hour or quadrant of an analog clock. This seemed more logical given how we divide up the hour naturally.
+
+I opted for a pictoral representation of the 15s digit (quarter hour) because it was too easy to glance at the clock and it register as a normal, base 10 clock. This way, it's clear that the representation is different and should be read differently.
 
 ## Temperature button
 The real-time clock chip has a temperature sensor on it (for some reason). I thought it would be a shame to waste. Hold down the "Temp" button to display the temperature. The hour digit displays `T` when active.
