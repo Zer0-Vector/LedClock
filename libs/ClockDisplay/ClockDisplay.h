@@ -25,7 +25,7 @@ class ClockDisplay {
         void _updateBrightness();
         
         LedControl * _ledctrl;
-        uint8_t _brightness;
+        int8_t _brightness;
 
         char * _currentDisplay;
 
