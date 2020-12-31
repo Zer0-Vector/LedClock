@@ -243,6 +243,7 @@ void loop() {
                 disp.clear(CS_HOUR);
                 disp.clear(CS_MINUTE15);
                 disp.clear(CS_MINUTE1);
+                disp.shutdown(); // saves power
             }
     }
     showedTime = (state == SHOW_TIME);
