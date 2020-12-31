@@ -12,6 +12,7 @@ static uint8_t lastMinute = 0;
 #define PIN_SET 3
 #define PIN_PLUS 4
 #define PIN_MINUS 5
+#define PIN_ALWAYSON 6
 
 enum ClockState {
     SHOW_TIME,
@@ -20,7 +21,8 @@ enum ClockState {
     SET_MINUTE,
     SET_ALARM_HOUR,
     SET_ALARM_MINUTE,
-    INVALID_TIME
+    INVALID_TIME,
+    HIDDEN_TIME,
 } state;
 
 void setup() {
@@ -28,11 +30,11 @@ void setup() {
     pinMode(PIN_SET, INPUT);
     pinMode(PIN_PLUS, INPUT);
     pinMode(PIN_MINUS, INPUT);
+    pinMode(PIN_ALWAYSON, INPUT);
 
     // unused pins
     pinMode(0, INPUT_PULLUP);
     pinMode(1, INPUT_PULLUP);
-    pinMode(6, INPUT_PULLUP);
     pinMode(7, INPUT_PULLUP);
     pinMode(8, INPUT_PULLUP);
     pinMode(9, INPUT_PULLUP);
@@ -72,13 +74,16 @@ void setup() {
     lastMinute = now.Minute();
 
     Serial.println(F("setup done"));
-    // Serial.end();
+    Serial.end();
 }
 
 static bool hourTrans = false;
 static bool min16Trans = false;
 static bool min1Trans = false;
 static uint16_t transIndex = 8;
+
+#define DISPLAY_TIMEOUT 5000
+#define TIME_UPDATE_DELAY 75
 
 void loop() {
     static bool tempDown = false;
@@ -91,8 +96,15 @@ void loop() {
     static unsigned long lastBlink = millis();
     static bool blinkOn = true;
 
+    static unsigned long lastShowTime = millis();
+    static bool showedTime = true;
+
+    
+    bool ppressed = scanForPlus();
+    bool mpressed = scanForMinus();
+
     bool reading = digitalRead(PIN_TEMP) == HIGH;
-    if (reading == tempDown && tempDown && state == SHOW_TIME) {
+    if (reading == tempDown && tempDown && (state == SHOW_TIME || state == HIDDEN_TIME)) {
         state = SHOW_TEMP;
     } else if (reading == tempDown && !tempDown && state == SHOW_TEMP) {
         state = SHOW_TIME;
@@ -109,6 +121,7 @@ void loop() {
             switch (state) {
                 case INVALID_TIME:
                 case SHOW_TIME:
+                case HIDDEN_TIME:
                     state = SET_HOUR;
                     settingHour = rtc.GetDateTime().Hour();
                     settingMinute = rtc.GetDateTime().Minute();
@@ -141,12 +154,12 @@ void loop() {
                 }
                 break;
             case SET_MINUTE:
-                if (scanForPlus()) {
+                if (ppressed) {
                     settingMinute++;
                     if (settingMinute == 60) {
                         settingMinute = 0;
                     }
-                } else if (scanForMinus()) {
+                } else if (mpressed) {
                     settingMinute--;
                     if (settingMinute < 0) {
                         settingMinute = 59;
@@ -201,11 +214,39 @@ void loop() {
                 blinkOn = !blinkOn;
             }
             break;
+        case SHOW_TIME:
+            if (ppressed) {
+                disp.brighten();
+            }
+            if (mpressed) {
+                disp.dim();
+            }
         default:
-            showTime();
-            break;
+            reading = digitalRead(PIN_ALWAYSON) == HIGH;
+            Serial.print("alwayson = ");
+            Serial.println(reading);
+            Serial.println(millis() - lastShowTime);
+            if (ppressed || mpressed) {
+                state = SHOW_TIME;
+                showedTime = false;
+            }
+            if (reading || state != HIDDEN_TIME) {
+                showTime();
+                if (!showedTime || reading) {
+                    lastShowTime = millis();
+                    showedTime = true;
+                }
+                if (millis() - lastShowTime > DISPLAY_TIMEOUT) {
+                    state = HIDDEN_TIME;
+                }
+            } else {
+                disp.clear(CS_HOUR);
+                disp.clear(CS_MINUTE15);
+                disp.clear(CS_MINUTE1);
+            }
     }
-    delay(75);
+    showedTime = state == SHOW_TIME;
+    delay(25);
 }
 
 void saveSetTime(uint8_t h, uint8_t m) {
@@ -261,6 +302,11 @@ void showTemp() {
 }
 
 void showTime() {
+    static unsigned long lastTimeUpdate = 0;
+    if (millis() - lastTimeUpdate < TIME_UPDATE_DELAY) {
+        return;
+    }
+    lastTimeUpdate = millis();
     RtcDateTime now = rtc.GetDateTime();
     uint8_t hour = now.Hour() % 24;
     uint8_t minute = now.Minute();
