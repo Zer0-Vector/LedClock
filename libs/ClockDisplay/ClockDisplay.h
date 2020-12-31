@@ -12,25 +12,25 @@ class ClockDisplay {
         ClockDisplay(int dataPin, int clockPin, int csPin);
         ~ClockDisplay();
         void begin();
-        void showDigit(uint8_t pos, uint8_t digit);
-        void showCharacter(uint8_t pos, char c);
+        void showClockDigit(uint8_t pos, uint8_t digit);
+        void showCharacter(uint8_t pos, wchar_t c);
         void clear(uint8_t pos);
         void showTransition(uint8_t pos, uint8_t index, uint8_t nextDigit);
-        void showCharTransition(uint8_t pos, uint8_t index, char next);
+        void showCharTransition(uint8_t pos, uint8_t index, wchar_t next);
         void brighten();
         void dim();
         void shutdown();
         void startup();
-        static char digitToChar(uint8_t d);
+        static wchar_t digitToChar(uint8_t pos, uint8_t d);
     private:
-        uint8_t _getCharRow(char c, uint8_t row);
+        uint8_t _getCharRow(wchar_t c, uint8_t row);
         void _updateBrightness();
         
         LedControl * _ledctrl;
         int8_t _brightness;
         bool _isShutdown;
 
-        char * _currentDisplay;
+        wchar_t * _currentDisplay;
 
         static const PROGMEM uint8_t c_zero[];
         static const PROGMEM uint8_t c_one[];
@@ -58,4 +58,10 @@ class ClockDisplay {
         static const PROGMEM uint8_t c_twentythree[];
         static const PROGMEM uint8_t c_T[];
         static const PROGMEM uint8_t c_blank[];
+        static const PROGMEM uint8_t c_firstquarter[];
+        static const PROGMEM uint8_t c_secondquarter[];
+        static const PROGMEM uint8_t c_thirdquarter[];
+        static const PROGMEM uint8_t c_fourthquarter[];
+        static const PROGMEM uint8_t c_hyphen[];
+        static const PROGMEM uint8_t c_plus[];
 };

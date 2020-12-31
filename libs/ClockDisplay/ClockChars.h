@@ -274,6 +274,7 @@ const PROGMEM uint8_t ClockDisplay::c_twentythree[8] = {
     B01000010
 };
 
+// T
 const PROGMEM uint8_t ClockDisplay::c_T[8] = {
     B01111110,
     B00011000,
@@ -285,6 +286,7 @@ const PROGMEM uint8_t ClockDisplay::c_T[8] = {
     B00011000
 };
 
+// ' '
 const PROGMEM uint8_t ClockDisplay::c_blank[8] = {
     B00000000,
     B00000000,
@@ -292,6 +294,72 @@ const PROGMEM uint8_t ClockDisplay::c_blank[8] = {
     B00000000,
     B00000000,
     B00000000,
+    B00000000,
+    B00000000
+};
+
+const PROGMEM uint8_t ClockDisplay::c_firstquarter[8] = {
+    B00111100,
+    B01001110,
+    B10001111,
+    B10001111,
+    B10000001,
+    B10000001,
+    B01000010,
+    B00111100
+};
+
+const PROGMEM uint8_t ClockDisplay::c_secondquarter[8] = {
+    B00111100,
+    B01000010,
+    B10000001,
+    B10000001,
+    B10001111,
+    B10001111,
+    B01001110,
+    B00111100
+};
+
+const PROGMEM uint8_t ClockDisplay::c_thirdquarter[8] = {
+    B00111100,
+    B01000010,
+    B10000001,
+    B10000001,
+    B11110001,
+    B11110001,
+    B01110010,
+    B00111100
+};
+
+const PROGMEM uint8_t ClockDisplay::c_fourthquarter[8] = {
+    B00111100,
+    B01110010,
+    B11110001,
+    B11110001,
+    B10000001,
+    B10000001,
+    B01000010,
+    B00111100
+};
+
+const PROGMEM uint8_t ClockDisplay::c_hyphen[8] = {
+    B00000000,
+    B00000000,
+    B00000000,
+    B01111100,
+    B00000000,
+    B00000000,
+    B00000000,
+    B00000000
+};
+
+const PROGMEM uint8_t ClockDisplay::c_plus[8] = {
+    B00000000,
+    B00010000,
+    B00010000,
+    B01111100,
+    B00010000,
+    B00010000,
     B00000000,
     B00000000
 };
