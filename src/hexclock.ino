@@ -245,7 +245,7 @@ void loop() {
                 disp.clear(CS_MINUTE1);
             }
     }
-    showedTime = state == SHOW_TIME;
+    showedTime = (state == SHOW_TIME);
     delay(25);
 }
 
