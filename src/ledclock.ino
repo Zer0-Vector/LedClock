@@ -188,10 +188,10 @@ void loop() {
             showTemp();
             break;
         case SET_HOUR:
-            disp.showDigit(CS_MINUTE15, (settingMinute / 15));
-            disp.showDigit(CS_MINUTE1, (settingMinute % 15));
+            disp.showClockDigit(CS_MINUTE15, (settingMinute / 15));
+            disp.showClockDigit(CS_MINUTE1, (settingMinute % 15));
             if (blinkOn) {
-                disp.showDigit(CS_HOUR, settingHour);
+                disp.showClockDigit(CS_HOUR, settingHour);
             } else {
                 disp.clear(CS_HOUR);
             }
@@ -201,10 +201,10 @@ void loop() {
             }
             break;
         case SET_MINUTE:
-            disp.showDigit(CS_HOUR, settingHour);
+            disp.showClockDigit(CS_HOUR, settingHour);
             if (blinkOn) {
-                disp.showDigit(CS_MINUTE15, settingMinute / 15);
-                disp.showDigit(CS_MINUTE1, settingMinute % 15);
+                disp.showClockDigit(CS_MINUTE15, settingMinute / 15);
+                disp.showClockDigit(CS_MINUTE1, settingMinute % 15);
             } else {
                 disp.clear(CS_MINUTE15);
                 disp.clear(CS_MINUTE1);
@@ -293,13 +293,25 @@ bool scanForMinus() {
 void showTemp() {
     RtcTemperature temp = rtc.GetTemperature();
     int tinf = (int)temp.AsFloatDegF();
-    // TODO impose display limits: t<=-10 -> "T-L", t>100 -> "T+H"
-    // TODO alter ClockDisplay to showCharacter in addition to showDigit
 
-    // in base 10
     disp.showCharacter(CS_HOUR, 'T');
-    disp.showDigit(CS_MINUTE15, tinf / 10);
-    disp.showDigit(CS_MINUTE1, tinf % 10);
+    
+    // in base 10
+    if (tinf < 0 ) {
+        disp.showCharacter(CS_MINUTE15, '-');
+    } else if (tinf > 100) {
+        disp.showCharacter(CS_MINUTE15, '+');
+    } else {
+        disp.showCharacter(CS_MINUTE15, '0' + (tinf / 10));
+    }
+    
+    if (tinf <= -10) {
+        disp.showCharacter(CS_MINUTE1, 'L');
+    } else if (tinf >= 100) {
+        disp.showCharacter(CS_MINUTE1, 'H');
+    } else {
+        disp.showCharacter(CS_MINUTE1, '0' + (tinf % 10));
+    }
 }
 
 void showTime() {
@@ -331,19 +343,19 @@ void showTime() {
     if (min1Trans) {
         disp.showTransition(CS_MINUTE1, transIndex, min1);
     } else {
-        disp.showDigit(CS_MINUTE1, min1);
+        disp.showClockDigit(CS_MINUTE1, min1);
     }
 
     if (min16Trans) {
         disp.showTransition(CS_MINUTE15, transIndex, min15);
     } else {
-        disp.showDigit(CS_MINUTE15, min15);
+        disp.showClockDigit(CS_MINUTE15, min15);
     }
     
     if (hourTrans) {
         disp.showTransition(CS_HOUR, transIndex, hour);
     } else {
-        disp.showDigit(CS_HOUR, hour);
+        disp.showClockDigit(CS_HOUR, hour);
     }
     transIndex++;
     lastMinute = minute;

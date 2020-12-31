@@ -6,7 +6,7 @@ ClockDisplay::ClockDisplay(int dataPin, int clockPin, int csPin) {
     _ledctrl = new LedControl(dataPin, clockPin, csPin, 3);
     _brightness = 0;
     _isShutdown = true;
-    _currentDisplay = (char*)calloc(3, sizeof(char));
+    _currentDisplay = (wchar_t*)calloc(3, sizeof(wchar_t));
     _currentDisplay[CS_MINUTE1] = ' ';
     _currentDisplay[CS_MINUTE15] = ' ';
     _currentDisplay[CS_HOUR] = ' ';
@@ -57,12 +57,25 @@ void ClockDisplay::_updateBrightness() {
     _ledctrl->setIntensity(CS_MINUTE1, _brightness);
 }
 
-void ClockDisplay::showDigit(uint8_t pos, uint8_t digit) {
+void ClockDisplay::showClockDigit(uint8_t pos, uint8_t digit) {
     if (_isShutdown) startup();
-    showCharacter(pos, digitToChar(digit));
+    showCharacter(pos, digitToChar(pos, digit));
 }
 
-char ClockDisplay::digitToChar(uint8_t d) {
+wchar_t ClockDisplay::digitToChar(uint8_t pos, uint8_t d) {
+    if (pos == CS_MINUTE15) {
+        switch (d) {
+            case 0:
+                return L'╗';
+            case 1:
+                return L'╝';
+            case 2:
+                return L'╚';
+            case 3:
+                return L'╔';
+        }
+    }
+
     if (d < 10) {
         return '0' + d;
     } else {
@@ -70,7 +83,7 @@ char ClockDisplay::digitToChar(uint8_t d) {
     }
 }
 
-void ClockDisplay::showCharacter(uint8_t pos, char c) {
+void ClockDisplay::showCharacter(uint8_t pos, wchar_t c) {
     if (_isShutdown) startup();
     for (int i = 0; i < 8; i++) {
         _ledctrl->setRow(pos, i, _getCharRow(c, i));
@@ -80,10 +93,10 @@ void ClockDisplay::showCharacter(uint8_t pos, char c) {
 
 void ClockDisplay::showTransition(uint8_t pos, uint8_t index, uint8_t nextDigit) {
     if (_isShutdown) startup();
-    showCharTransition(pos, index, digitToChar(nextDigit));
+    showCharTransition(pos, index, digitToChar(pos, nextDigit));
 }
 
-void ClockDisplay::showCharTransition(uint8_t pos, uint8_t index, char next) {
+void ClockDisplay::showCharTransition(uint8_t pos, uint8_t index, wchar_t next) {
     if (_isShutdown) startup();
     for (int i = 0; i < 8; i++) {
         _ledctrl->setRow(pos, i, index < i 
@@ -107,7 +120,7 @@ void ClockDisplay::startup() {
     _isShutdown = false;
 }
 
-uint8_t ClockDisplay::_getCharRow(char c, uint8_t row) {
+uint8_t ClockDisplay::_getCharRow(wchar_t c, uint8_t row) {
     switch (c) {
         case ' ': return pgm_read_byte_near(c_blank + row);
         case '0': return pgm_read_byte_near(c_zero + row);
@@ -135,5 +148,11 @@ uint8_t ClockDisplay::_getCharRow(char c, uint8_t row) {
         case 'M': return pgm_read_byte_near(c_twentytwo + row);
         case 'N': return pgm_read_byte_near(c_twentythree + row);
         case 'T': return pgm_read_byte_near(c_T + row);
+        case L'╗': return pgm_read_byte_near(c_firstquarter + row);
+        case L'╝': return pgm_read_byte_near(c_secondquarter + row);
+        case L'╚': return pgm_read_byte_near(c_thirdquarter + row);
+        case L'╔': return pgm_read_byte_near(c_fourthquarter + row);
+        case '-': return pgm_read_byte_near(c_hyphen + row);
+        case '+': return pgm_read_byte_near(c_plus + row);
     }
 }
