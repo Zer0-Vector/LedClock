@@ -5,6 +5,7 @@
 ClockDisplay::ClockDisplay(int dataPin, int clockPin, int csPin) {
     _ledctrl = new LedControl(dataPin, clockPin, csPin, 3);
     _brightness = 0;
+    _isShutdown = true;
     _currentDisplay = (char*)calloc(3, sizeof(char));
     _currentDisplay[CS_MINUTE1] = ' ';
     _currentDisplay[CS_MINUTE15] = ' ';
@@ -38,13 +39,9 @@ void ClockDisplay::begin() {
     _ledctrl->clearDisplay(CS_MINUTE15);
     _ledctrl->clearDisplay(CS_MINUTE1);
 
-    _ledctrl->shutdown(CS_HOUR, true);
-    _ledctrl->shutdown(CS_MINUTE15, true);
-    _ledctrl->shutdown(CS_MINUTE1, true);
+    shutdown();
     delay(1000);
-    _ledctrl->shutdown(CS_HOUR, false);
-    _ledctrl->shutdown(CS_MINUTE15, false);
-    _ledctrl->shutdown(CS_MINUTE1, false);
+    startup();
 
     _updateBrightness();
 
@@ -54,12 +51,14 @@ void ClockDisplay::begin() {
 }
 
 void ClockDisplay::_updateBrightness() {
+    if (_isShutdown) startup();
     _ledctrl->setIntensity(CS_HOUR, _brightness);
     _ledctrl->setIntensity(CS_MINUTE15, _brightness);
     _ledctrl->setIntensity(CS_MINUTE1, _brightness);
 }
 
 void ClockDisplay::showDigit(uint8_t pos, uint8_t digit) {
+    if (_isShutdown) startup();
     showCharacter(pos, digitToChar(digit));
 }
 
@@ -72,6 +71,7 @@ char ClockDisplay::digitToChar(uint8_t d) {
 }
 
 void ClockDisplay::showCharacter(uint8_t pos, char c) {
+    if (_isShutdown) startup();
     for (int i = 0; i < 8; i++) {
         _ledctrl->setRow(pos, i, _getCharRow(c, i));
     }
@@ -79,16 +79,32 @@ void ClockDisplay::showCharacter(uint8_t pos, char c) {
 }
 
 void ClockDisplay::showTransition(uint8_t pos, uint8_t index, uint8_t nextDigit) {
+    if (_isShutdown) startup();
     showCharTransition(pos, index, digitToChar(nextDigit));
 }
 
 void ClockDisplay::showCharTransition(uint8_t pos, uint8_t index, char next) {
+    if (_isShutdown) startup();
     for (int i = 0; i < 8; i++) {
         _ledctrl->setRow(pos, i, index < i 
             ? _getCharRow(_currentDisplay[pos], i - 1 - index) 
             : _getCharRow(next, 8 - index + i)
             );
     }
+}
+
+void ClockDisplay::shutdown() {
+    _ledctrl->shutdown(CS_HOUR, true);
+    _ledctrl->shutdown(CS_MINUTE15, true);
+    _ledctrl->shutdown(CS_MINUTE1, true);
+    _isShutdown = true;
+}
+
+void ClockDisplay::startup() {
+    _ledctrl->shutdown(CS_HOUR, false);
+    _ledctrl->shutdown(CS_MINUTE15, false);
+    _ledctrl->shutdown(CS_MINUTE1, false);
+    _isShutdown = false;
 }
 
 uint8_t ClockDisplay::_getCharRow(char c, uint8_t row) {

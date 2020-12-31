@@ -19,6 +19,8 @@ class ClockDisplay {
         void showCharTransition(uint8_t pos, uint8_t index, char next);
         void brighten();
         void dim();
+        void shutdown();
+        void startup();
         static char digitToChar(uint8_t d);
     private:
         uint8_t _getCharRow(char c, uint8_t row);
@@ -26,6 +28,7 @@ class ClockDisplay {
         
         LedControl * _ledctrl;
         int8_t _brightness;
+        bool _isShutdown;
 
         char * _currentDisplay;
 
