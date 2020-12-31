@@ -1,7 +1,7 @@
 #include <Wire.h>
 #include <RtcDS3231.h>
 
-#include "ClockDisplay.h"
+#include <ClockDisplay.h>
 
 static RtcDS3231<TwoWire> rtc = RtcDS3231<TwoWire>(Wire);
 static ClockDisplay disp = ClockDisplay(12, 11, 10);
