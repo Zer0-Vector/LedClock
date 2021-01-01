@@ -363,3 +363,267 @@ const PROGMEM uint8_t ClockDisplay::c_plus[8] = {
     B00000000,
     B00000000
 };
+
+const PROGMEM uint8_t ClockDisplay::c_twelveoclock_am[8] = {
+    B00111100,
+    B01011010,
+    B10011001,
+    B10011001,
+    B10000001,
+    B10000001,
+    B01000010,
+    B00111100
+};
+
+const PROGMEM uint8_t ClockDisplay::c_oneoclock_am[8] = {
+    B00111100,
+    B01001110,
+    B10011001,
+    B10011001,
+    B10000001,
+    B10000001,
+    B01000010,
+    B00111100
+};
+
+const PROGMEM uint8_t ClockDisplay::c_twooclock_am[8] = {
+    B00111100,
+    B01000010,
+    B10000011,
+    B10001111,
+    B10001101,
+    B10000001,
+    B01000010,
+    B00111100
+};
+
+const PROGMEM uint8_t ClockDisplay::c_threeoclock_am[8] = {
+    B00111100,
+    B01000010,
+    B10000001,
+    B10001111,
+    B10001111,
+    B10000001,
+    B01000010,
+    B00111100
+};
+
+const PROGMEM uint8_t ClockDisplay::c_fouroclock_am[8] = {
+    B00111100,
+    B01000010,
+    B10000001,
+    B10001101,
+    B10001111,
+    B10000011,
+    B01000010,
+    B00111100
+};
+
+const PROGMEM uint8_t ClockDisplay::c_fiveoclock_am[8] = {
+    B00111100,
+    B01000010,
+    B10000001,
+    B10000001,
+    B10011001,
+    B10011001,
+    B01001110,
+    B00111100
+};
+
+const PROGMEM uint8_t ClockDisplay::c_sixoclock_am[8] = {
+    B00111100,
+    B01000010,
+    B10000001,
+    B10000001,
+    B10011001,
+    B10011001,
+    B01011010,
+    B00111100
+};
+
+const PROGMEM uint8_t ClockDisplay::c_sevenoclock_am[8] = {
+    B00111100,
+    B01000010,
+    B10000001,
+    B10000001,
+    B10011001,
+    B10011001,
+    B01110010,
+    B00111100
+};
+
+const PROGMEM uint8_t ClockDisplay::c_eightoclock_am[8] = {
+    B00111100,
+    B01000010,
+    B10000001,
+    B10110001,
+    B11110001,
+    B11000001,
+    B01000010,
+    B00111100
+};
+
+const PROGMEM uint8_t ClockDisplay::c_nineoclock_am[8] = {
+    B00111100,
+    B01000010,
+    B10000001,
+    B11110001,
+    B11110001,
+    B10000001,
+    B01000010,
+    B00111100
+};
+
+const PROGMEM uint8_t ClockDisplay::c_tenoclock_am[8] = {
+    B00111100,
+    B01000010,
+    B11000001,
+    B11110001,
+    B10110001,
+    B10000001,
+    B01000010,
+    B00111100
+};
+
+const PROGMEM uint8_t ClockDisplay::c_elevenoclock_am[8] = {
+    B00111100,
+    B01110010,
+    B10011001,
+    B10011001,
+    B10000001,
+    B10000001,
+    B01000010,
+    B00111100
+};
+
+const PROGMEM uint8_t ClockDisplay::c_twelveoclock_pm[8] = {
+    B00111100,
+    B01100110,
+    B11100111,
+    B11100111,
+    B11111111,
+    B11111111,
+    B01111110,
+    B00111100
+};
+
+const PROGMEM uint8_t ClockDisplay::c_oneoclock_pm[8] = {
+    B00111100,
+    B01110010,
+    B11100111,
+    B11100111,
+    B11111111,
+    B11111111,
+    B01111110,
+    B00111100
+};
+
+const PROGMEM uint8_t ClockDisplay::c_twooclock_pm[8] = {
+    B00111100,
+    B01111110,
+    B11111101,
+    B11110001,
+    B11110011,
+    B11111111,
+    B01111110,
+    B00111100
+};
+
+const PROGMEM uint8_t ClockDisplay::c_threeoclock_pm[8] = {
+    B00111100,
+    B01111110,
+    B11111111,
+    B11110001,
+    B11110001,
+    B11111111,
+    B01111110,
+    B00111100
+};
+
+const PROGMEM uint8_t ClockDisplay::c_fouroclock_pm[8] = {
+    B00111100,
+    B01111110,
+    B11111111,
+    B11110011,
+    B11110001,
+    B11111101,
+    B01111110,
+    B00111100
+};
+
+const PROGMEM uint8_t ClockDisplay::c_fiveoclock_pm[8] = {
+    B00111100,
+    B01111110,
+    B11111111,
+    B11111111,
+    B11100111,
+    B11100111,
+    B01110010,
+    B00111100
+};
+
+const PROGMEM uint8_t ClockDisplay::c_sixoclock_pm[8] = {
+    B00111100,
+    B01111110,
+    B11111111,
+    B11111111,
+    B11100111,
+    B11100111,
+    B01100110,
+    B00111100
+};
+
+const PROGMEM uint8_t ClockDisplay::c_sevenoclock_pm[8] = {
+    B00111100,
+    B01111110,
+    B11111111,
+    B11111111,
+    B11100111,
+    B11100111,
+    B01001110,
+    B00111100
+};
+
+const PROGMEM uint8_t ClockDisplay::c_eightoclock_pm[8] = {
+    B00111100,
+    B01111110,
+    B11111111,
+    B11001111,
+    B10001111,
+    B10111111,
+    B01111110,
+    B00111100
+};
+
+const PROGMEM uint8_t ClockDisplay::c_nineoclock_pm[8] = {
+    B00111100,
+    B01111110,
+    B11111111,
+    B10001111,
+    B10001111,
+    B11111111,
+    B01111110,
+    B00111100
+};
+
+const PROGMEM uint8_t ClockDisplay::c_tenoclock_pm[8] = {
+    B00111100,
+    B01111110,
+    B10111111,
+    B10001111,
+    B11001111,
+    B11111111,
+    B01111110,
+    B00111100
+};
+
+const PROGMEM uint8_t ClockDisplay::c_elevenoclock_pm[8] = {
+    B00111100,
+    B01001110,
+    B11100111,
+    B11100111,
+    B11111111,
+    B11111111,
+    B01111110,
+    B00111100
+};
