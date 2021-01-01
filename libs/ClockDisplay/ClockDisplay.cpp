@@ -76,6 +76,10 @@ wchar_t ClockDisplay::digitToChar(uint8_t pos, uint8_t d) {
         }
     }
 
+    if (pos == CS_HOUR) {
+        return 'a' + d;
+    }
+
     if (d < 10) {
         return '0' + d;
     } else {
@@ -154,5 +158,29 @@ uint8_t ClockDisplay::_getCharRow(wchar_t c, uint8_t row) {
         case L'╔': return pgm_read_byte_near(c_fourthquarter + row);
         case '-': return pgm_read_byte_near(c_hyphen + row);
         case '+': return pgm_read_byte_near(c_plus + row);
+        case 'a': return pgm_read_byte_near(c_twelveoclock_am + row);
+        case 'b': return pgm_read_byte_near(c_oneoclock_am + row);
+        case 'c': return pgm_read_byte_near(c_twooclock_am + row);
+        case 'd': return pgm_read_byte_near(c_threeoclock_am + row);
+        case 'e': return pgm_read_byte_near(c_fouroclock_am + row);
+        case 'f': return pgm_read_byte_near(c_fiveoclock_am + row);
+        case 'g': return pgm_read_byte_near(c_sixoclock_am + row);
+        case 'h': return pgm_read_byte_near(c_sevenoclock_am + row);
+        case 'i': return pgm_read_byte_near(c_eightoclock_am + row);
+        case 'j': return pgm_read_byte_near(c_nineoclock_am + row);
+        case 'k': return pgm_read_byte_near(c_tenoclock_am + row);
+        case 'l': return pgm_read_byte_near(c_elevenoclock_am + row);
+        case 'm': return pgm_read_byte_near(c_twelveoclock_pm + row);
+        case 'n': return pgm_read_byte_near(c_oneoclock_pm + row);
+        case 'o': return pgm_read_byte_near(c_twooclock_pm + row);
+        case 'p': return pgm_read_byte_near(c_threeoclock_pm + row);
+        case 'q': return pgm_read_byte_near(c_fouroclock_pm + row);
+        case 'r': return pgm_read_byte_near(c_fiveoclock_pm + row);
+        case 's': return pgm_read_byte_near(c_sixoclock_pm + row);
+        case 't': return pgm_read_byte_near(c_sevenoclock_pm + row);
+        case 'u': return pgm_read_byte_near(c_eightoclock_pm + row);
+        case 'v': return pgm_read_byte_near(c_nineoclock_pm + row);
+        case 'w': return pgm_read_byte_near(c_tenoclock_pm + row);
+        case 'x': return pgm_read_byte_near(c_elevenoclock_pm + row);
     }
 }
