@@ -99,10 +99,6 @@ void loop() {
     static unsigned long lastShowTime = millis();
     static bool showedTime = true;
 
-    
-    bool ppressed = scanForPlus();
-    bool mpressed = scanForMinus();
-
     bool reading = digitalRead(PIN_TEMP) == HIGH;
     if (reading == tempDown && tempDown && (state == SHOW_TIME || state == HIDDEN_TIME)) {
         state = SHOW_TEMP;
@@ -139,37 +135,11 @@ void loop() {
             }
         }
         setHeld = false;
-        switch (state) {
-            case SET_HOUR:
-                if (scanForPlus()) {
-                    settingHour++;
-                    if (settingHour > 23) {
-                        settingHour = 0;
-                    }
-                } else if (scanForMinus()) {
-                    settingHour--;
-                    if (settingHour < 0) {
-                        settingHour = 23;
-                    }
-                }
-                break;
-            case SET_MINUTE:
-                if (ppressed) {
-                    settingMinute++;
-                    if (settingMinute == 60) {
-                        settingMinute = 0;
-                    }
-                } else if (mpressed) {
-                    settingMinute--;
-                    if (settingMinute < 0) {
-                        settingMinute = 59;
-                    }
-                }
-                break;
-        }
     }
     setDown = reading;
 
+    bool ppressed = scanForPlus();
+    bool mpressed = scanForMinus();
     switch (state) {
         case INVALID_TIME:
             if (!blinkOn) {
@@ -188,6 +158,19 @@ void loop() {
             showTemp();
             break;
         case SET_HOUR:
+            if (ppressed) {
+                settingHour++;
+                if (settingHour > 23) {
+                    settingHour = 0;
+                }
+            }
+            if (mpressed) {
+                settingHour--;
+                if (settingHour < 0) {
+                    settingHour = 23;
+                }
+            }
+
             disp.showClockDigit(CS_MINUTE15, (settingMinute / 15));
             disp.showClockDigit(CS_MINUTE1, (settingMinute % 15));
             if (blinkOn) {
@@ -201,6 +184,18 @@ void loop() {
             }
             break;
         case SET_MINUTE:
+            if (ppressed) {
+                settingMinute++;
+                if (settingMinute == 60) {
+                    settingMinute = 0;
+                }
+            }
+            if (mpressed) {
+                settingMinute--;
+                if (settingMinute < 0) {
+                    settingMinute = 59;
+                }
+            }
             disp.showClockDigit(CS_HOUR, settingHour);
             if (blinkOn) {
                 disp.showClockDigit(CS_MINUTE15, settingMinute / 15);
