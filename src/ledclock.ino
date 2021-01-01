@@ -93,9 +93,6 @@ void loop() {
     static int8_t settingHour = 0;
     static int8_t settingMinute = 60;
 
-    static unsigned long lastBlink = millis();
-    static bool blinkOn = true;
-
     static unsigned long lastShowTime = millis();
     static bool showedTime = true;
 
@@ -115,9 +112,11 @@ void loop() {
         if (setHeld) {
             Serial.println(F("setUp!"));
             switch (state) {
+                case HIDDEN_TIME:
+                    state = SHOW_TIME;
+                    break;
                 case INVALID_TIME:
                 case SHOW_TIME:
-                case HIDDEN_TIME:
                     state = SET_HOUR;
                     settingHour = rtc.GetDateTime().Hour();
                     settingMinute = rtc.GetDateTime().Minute();
@@ -142,17 +141,7 @@ void loop() {
     bool mpressed = scanForMinus();
     switch (state) {
         case INVALID_TIME:
-            if (!blinkOn) {
-                disp.clear(CS_HOUR);
-                disp.clear(CS_MINUTE15);
-                disp.clear(CS_MINUTE1);
-            } else {
-                showTime();
-            }
-            if (millis() - lastBlink > 250) {
-                lastBlink = millis();
-                blinkOn = !blinkOn;
-            }
+            handleState_invalidTime();
             break;
         case SHOW_TEMP:
             showTemp();
@@ -173,14 +162,10 @@ void loop() {
 
             disp.showClockDigit(CS_MINUTE15, (settingMinute / 15));
             disp.showClockDigit(CS_MINUTE1, (settingMinute % 15));
-            if (blinkOn) {
+            if (blinkShouldShow()) {
                 disp.showClockDigit(CS_HOUR, settingHour);
             } else {
                 disp.clear(CS_HOUR);
-            }
-            if (millis() - lastBlink > 250) {
-                lastBlink = millis();
-                blinkOn = !blinkOn;
             }
             break;
         case SET_MINUTE:
@@ -197,16 +182,12 @@ void loop() {
                 }
             }
             disp.showClockDigit(CS_HOUR, settingHour);
-            if (blinkOn) {
+            if (blinkShouldShow()) {
                 disp.showClockDigit(CS_MINUTE15, settingMinute / 15);
                 disp.showClockDigit(CS_MINUTE1, settingMinute % 15);
             } else {
                 disp.clear(CS_MINUTE15);
                 disp.clear(CS_MINUTE1);
-            }
-            if (millis() - lastBlink > 250) {
-                lastBlink = millis();
-                blinkOn = !blinkOn;
             }
             break;
         case SHOW_TIME:
@@ -243,6 +224,26 @@ void loop() {
     }
     showedTime = (state == SHOW_TIME);
     delay(25);
+}
+
+void handleState_invalidTime() {
+    if (blinkShouldShow()) {
+        disp.clear(CS_HOUR);
+        disp.clear(CS_MINUTE15);
+        disp.clear(CS_MINUTE1);
+    } else {
+        showTime();
+    }
+}
+
+bool blinkShouldShow() {
+    static bool shouldShow = true;
+    static unsigned long lastBlink = millis();
+    if (millis() - lastBlink > 250) {
+        lastBlink = millis();
+        shouldShow = !shouldShow;
+    }
+    return shouldShow;
 }
 
 void saveSetTime(uint8_t h, uint8_t m) {
