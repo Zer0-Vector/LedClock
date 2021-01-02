@@ -115,9 +115,8 @@ void loop() {
 
     if (buttonsDown > 0) {
         triggerButtonsDown(buttonsDown);
-    }
     if (buttonsUp > 0) {
-        triggerButtonsPressed(buttonsUp);
+        triggerButtonsUp(buttonsUp);
     }
     if (buttonsHoldTrigger > 0) {
         triggerButtonsHeld(buttonsHoldTrigger);
@@ -216,7 +215,7 @@ void triggerButtonsDown(uint8_t buttons) {
     }
 }
 
-void triggerButtonsPressed(uint8_t buttons) {
+void triggerButtonsUp(uint8_t buttons) {
     switch (state) {
         case SHOW_TEMP:
             if (buttons & ClockButton::TEMP) {
