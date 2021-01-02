@@ -5,8 +5,6 @@
 
 static RtcDS3231<TwoWire> rtc = RtcDS3231<TwoWire>(Wire);
 static ClockDisplay disp = ClockDisplay(12, 11, 10);
-static uint8_t lastHour = 0;
-static uint8_t lastMinute = 0;
 
 #define PIN_TEMP 2
 #define PIN_SET 3
@@ -93,10 +91,6 @@ void setup() {
     rtc.Enable32kHzPin(false);
 
     disp.begin();
-
-    RtcDateTime now = rtc.GetDateTime();
-    lastHour = now.Hour();
-    lastMinute = now.Minute();
 
     Serial.println(F("setup done"));
     // Serial.end();
@@ -520,6 +514,9 @@ void showTime() {
     static bool min16Trans = false;
     static bool min1Trans = false;
     static uint16_t transIndex = 8;
+    static uint8_t lastHour = rtc.GetDateTime().Hour();
+    static uint8_t lastMinute = rtc.GetDateTime().Minute();
+
 
     if (millis() - lastTimeUpdate < TIME_UPDATE_DELAY) {
         return;
