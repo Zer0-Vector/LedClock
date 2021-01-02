@@ -17,13 +17,38 @@ static uint8_t lastMinute = 0;
 enum ClockState {
     SHOW_TIME,
     SHOW_TEMP,
-    SET_HOUR,
+    SHOW_ALARM1,
+    SHOW_ALARM2,
+    SET_TIME,
+    SET_HOUR, // when hold trigger happens, before button release
     SET_MINUTE,
-    SET_ALARM_HOUR,
-    SET_ALARM_MINUTE,
+    SET_ALARM1, // when hold trigger happens, before button release
+    SET_ALARM1_HOUR,
+    SET_ALARM1_MINUTE,
+    SET_ALARM2, // when hold trigger happens, before button release
+    SET_ALARM2_HOUR,
+    SET_ALARM2_MINUTE,
     INVALID_TIME,
     HIDDEN_TIME,
 } state;
+
+enum ClockButton : uint8_t {
+    PLUS = 0x01,
+    MINUS = 0x02,
+    SET = 0x04,
+    ALARM1 = 0x08,
+    ALARM2 = 0x10,
+    TEMP = 0x20,
+    SNOOZE = 0x40
+};
+
+enum AlarmState : uint8_t {
+    SILENT = 0x00,
+    ALARM1_ON = 0x01,
+    ALARM2_ON = 0x02,
+    ALARM1_SNOOZE = 0x10,
+    ALARM2_SNOOZE = 0x20
+} alarmSoundState;
 
 void setup() {
     pinMode(PIN_TEMP, INPUT);
@@ -74,94 +99,335 @@ void setup() {
     lastMinute = now.Minute();
 
     Serial.println(F("setup done"));
-    Serial.end();
+    // Serial.end();
 }
 
-static bool hourTrans = false;
-static bool min16Trans = false;
-static bool min1Trans = false;
-static uint16_t transIndex = 8;
+static int8_t settingHour = 25;
+static int8_t settingMinute = 60;
 
 #define DISPLAY_TIMEOUT 5000
 #define TIME_UPDATE_DELAY 75
+#define TICK_DELAY 25
+#define BUTTON_HOLD_TIMEOUT 2000
+#define BLINK_DELAY 250
+#define BLINK_DELAYx2 500
+
 
 void loop() {
-    static bool tempDown = false;
-    static bool setDown = false;
-    static bool setHeld = false;
+    static uint8_t buttonsDown = 0x00;
 
-    static int8_t settingHour = 0;
-    static int8_t settingMinute = 60;
+    uint8_t buttonsUp = queryButtonsState(&buttonsDown);
+    uint8_t buttonsHoldTrigger = queryHoldState(buttonsDown);
 
-    static unsigned long lastShowTime = millis();
-    static bool showedTime = true;
-
-    bool reading = digitalRead(PIN_TEMP) == HIGH;
-    if (reading == tempDown && tempDown && (state == SHOW_TIME || state == HIDDEN_TIME)) {
-        state = SHOW_TEMP;
-    } else if (reading == tempDown && !tempDown && state == SHOW_TEMP) {
-        state = SHOW_TIME;
+    if (buttonsDown > 0) {
+        triggerButtonsDown(buttonsDown);
     }
-    tempDown = reading;
+    if (buttonsUp > 0) {
+        triggerButtonsPressed(buttonsUp);
+    }
+    if (buttonsHoldTrigger > 0) {
+        triggerButtonsHeld(buttonsHoldTrigger);
+    }
 
-    reading = digitalRead(PIN_SET) == HIGH;
-    if (reading == setDown && setDown) {
-        Serial.println(F("setDown"));
-        setHeld = true;
-    } else if (reading == setDown && !setDown) {
-        if (setHeld) {
-            Serial.println(F("setUp!"));
-            switch (state) {
-                case HIDDEN_TIME:
-                    state = SHOW_TIME;
-                    break;
-                case INVALID_TIME:
-                case SHOW_TIME:
-                    state = SET_HOUR;
-                    settingHour = rtc.GetDateTime().Hour();
-                    settingMinute = rtc.GetDateTime().Minute();
-                    Serial.println(F("state=SET_HOUR"));
-                    break;
-                case SET_HOUR:
-                    state = SET_MINUTE;
-                    Serial.println(F("state=SET_MINUTE"));
-                    break;
-                case SET_MINUTE:
-                    saveSetTime(settingHour, settingMinute);
-                    state = SHOW_TIME;
-                    Serial.println(F("state=SHOW_TIME"));
-                    break;
+    updateDisplay();
+
+    delay(TICK_DELAY);
+}
+
+/**
+ * buttonsDown reflects what buttons are held down.
+ * returns: buttonsUp is an event trigger when a button is released. It is non-zero for 1 tick.
+ */
+uint8_t queryButtonsState(uint8_t * buttonsDown) {
+    static uint8_t lastReading = 0x00;
+    uint8_t reading = 0x00;
+    reading |= queryButton(PIN_PLUS, PLUS);
+    reading |= queryButton(PIN_MINUS, MINUS);
+    reading |= queryButton(PIN_SET, SET);
+    reading |= queryButton(PIN_TEMP, TEMP);
+    
+    // reading |= queryButton(PIN_ALARM1, ALARM1);
+    // reading |= queryButton(PIN_ALARM2, ALARM2);
+    // reading |= queryButton(PIN_SNOOZE, SNOOZE);
+    uint8_t rval = 0x00;
+    for (uint16_t b = 1; b < 0x100; b <<= 1) {
+        if ((reading & b) == (lastReading & b)) {
+            if (reading & b) {
+                *buttonsDown |= b;
+            } else {
+                rval |= *buttonsDown & b;
+                *buttonsDown &= ~b;
             }
         }
-        setHeld = false;
     }
-    setDown = reading;
+    lastReading = reading;
+    return rval;
+}
 
-    bool ppressed = scanForPlus();
-    bool mpressed = scanForMinus();
+uint8_t queryHoldState(uint8_t buttonsDown) {
+    static unsigned long setHoldTime = 0;
+    static unsigned long alarm1HoldTime = 0;
+    static unsigned long alarm2HoldTime = 0;
+    static unsigned long plusHoldTime = 0;
+    static unsigned long minusHoldtime = 0;
+
+    uint8_t buttonsHeld = 0x00;
+    if (holdingButtonTick(buttonsDown & ClockButton::SET, &setHoldTime)) {
+        buttonsHeld |= ClockButton::SET;
+    } else if (holdingButtonTick(buttonsDown & ClockButton::ALARM1, &alarm1HoldTime)) {
+        buttonsHeld |= ClockButton::ALARM1;
+    } else if (holdingButtonTick(buttonsDown & ClockButton::ALARM2, &alarm2HoldTime)) {
+        buttonsHeld |= ClockButton::ALARM2;
+    } else if (holdingButtonTick(buttonsDown & ClockButton::PLUS, &plusHoldTime)) {
+        buttonsHeld |= ClockButton::PLUS;
+    } else if (holdingButtonTick(buttonsDown & ClockButton::MINUS, &minusHoldtime)) {
+        buttonsHeld |= ClockButton::MINUS;
+    }
+    return buttonsHeld;
+}
+
+bool holdingButtonTick(bool buttonDown, unsigned long * downTime) {
+    if (buttonDown) {
+        if (*downTime == 0) {
+            *downTime = millis();
+        } else if (millis() - *downTime > BUTTON_HOLD_TIMEOUT) {
+            return true;
+        }
+    } else {
+        *downTime = 0;
+    }
+    return false;
+}
+
+uint8_t queryButton(uint8_t pin, ClockButton button) {
+    return (digitalRead(pin) == HIGH) ? (uint8_t)button : 0;
+}
+
+void triggerButtonsDown(uint8_t buttons) {
+    if (buttons & ClockButton::TEMP) {
+        if (state == HIDDEN_TIME || state == SHOW_TIME) {
+            state = SHOW_TEMP;
+        }
+    } else if (buttons & ClockButton::ALARM1) {
+        if (state == SHOW_TIME) {
+            state = SHOW_ALARM1;
+        }
+    } else if (buttons & ClockButton::ALARM2) {
+        if (state == SHOW_TIME) {
+            state = SHOW_ALARM2;
+        }
+    }
+    if (state == HIDDEN_TIME) {
+        state = SHOW_TIME;
+    }
+}
+
+void triggerButtonsPressed(uint8_t buttons) {
     switch (state) {
+        case SHOW_TEMP:
+            if (buttons & ClockButton::TEMP) {
+                state = SHOW_TIME;
+            }
+            break;
+        case SHOW_TIME:
+            if (buttons & ClockButton::PLUS) {
+                disp.brighten();
+            }
+            if (buttons & ClockButton::MINUS) {
+                disp.dim();
+            }
+            if (buttons & ClockButton::ALARM1) {
+                // TODO
+                // enable alarm1
+            }
+            if (buttons & ClockButton::ALARM2) {
+                // TODO
+                // enable alarm2
+            }
+            break;
+        case HIDDEN_TIME: // should't happen, but will recover if it does.
+            state = SHOW_TIME;
+            break;
+        case SET_TIME:
+            if (buttons & ClockButton::SET) {
+                state = SET_HOUR;
+            }
+            break;
+        case SET_HOUR:
+            if (buttons & ClockButton::SET) {
+                state = SET_MINUTE;
+                break;
+            }
+            if (buttons & ClockButton::PLUS) {
+                incrementSetHour();
+            }
+            if (buttons & ClockButton::MINUS) {
+                decrementSetHour();
+            }
+            break;
+        case SET_MINUTE:
+            if (buttons & ClockButton::SET) {
+                state = SHOW_TIME;
+                saveSetTime();
+                break;
+            }
+            if (buttons & ClockButton::PLUS) {
+                incrementSettingMinute();
+            }
+            if (buttons & ClockButton::MINUS) {
+                decrementSettingMinute();
+            }
+            break;
+        case SET_ALARM1:
+            if (buttons & ClockButton::SET) {
+                state = SET_ALARM1_HOUR;
+            }
+            break;
+        case SET_ALARM1_HOUR:
+            if (buttons & ClockButton::SET) {
+                state = SET_ALARM1_MINUTE;
+                break;
+            }
+            if (buttons & ClockButton::PLUS) {
+                incrementSetHour();
+            }
+            if (buttons & ClockButton::MINUS) {
+                decrementSetHour();
+            }
+            break;
+        case SET_ALARM1_MINUTE:
+            if (buttons & ClockButton::SET) {
+                state = SHOW_TIME;
+                saveAlarm1();
+                break;
+            }
+            if (buttons & ClockButton::PLUS) {
+                incrementSettingMinute();
+            }
+            if (buttons & ClockButton::MINUS) {
+                decrementSettingMinute();
+            }
+            break;
+        case SET_ALARM2:
+            if (buttons & ClockButton::SET) {
+                state = SET_ALARM2_HOUR;
+            }
+            break;
+        case SET_ALARM2_HOUR:
+            if (buttons & ClockButton::SET) {
+                state = SET_ALARM2_MINUTE;
+                break;
+            }
+            if (buttons & ClockButton::PLUS) {
+                incrementSetHour();
+            }
+            if (buttons & ClockButton::MINUS) {
+                decrementSetHour();
+            }
+            break;
+        case SET_ALARM2_MINUTE:
+            if (buttons & ClockButton::SET) {
+                state = SHOW_TIME;
+                saveAlarm2();
+                break;
+            }
+            if (buttons & ClockButton::PLUS) {
+                incrementSettingMinute();
+            }
+            if (buttons & ClockButton::MINUS) {
+                decrementSettingMinute();
+            }
+            break;
+        case SHOW_ALARM1:
+            if (buttons & ClockButton::ALARM1) {
+                state = SHOW_TIME;
+            }
+            break;
+        case SHOW_ALARM2:
+            if (buttons & ClockButton::ALARM2) {
+                state = SHOW_TIME;
+            }
+            break;
+    }
+}
+
+void incrementSetHour() {
+    settingHour++;
+    if (settingHour > 23) {
+        settingHour = 0;
+    }
+}
+
+void decrementSetHour() {
+    settingHour--;
+    if (settingHour < 0) {
+        settingHour = 23;
+    }
+}
+
+void incrementSettingMinute() {
+    settingMinute++;
+    if (settingMinute > 59) {
+        settingMinute = 0;
+    }
+}
+
+void decrementSettingMinute() {
+    settingMinute--;
+    if (settingMinute < 0) {
+        settingMinute = 59;
+    }
+}
+
+bool blinkShouldShow() {
+    static bool shouldShow = true;
+    static unsigned long lastBlink = millis();
+    if (millis() - lastBlink > BLINK_DELAY) {
+        lastBlink = millis();
+        shouldShow = !shouldShow;
+    }
+    return shouldShow;
+}
+
+void saveSetTime() {
+    const RtcDateTime now = rtc.GetDateTime();
+    const RtcDateTime set = RtcDateTime(now.Year(), now.Month(), now.Day(), settingHour, settingMinute, 0);
+    rtc.SetDateTime(set);
+}
+
+void saveAlarm1() {
+    // TODO
+}
+
+void saveAlarm2() {
+    // TODO
+}
+
+void updateDisplay() {
+    switch (state) {
+        case SHOW_TIME:
+            showTime();
+            break;
         case INVALID_TIME:
-            handleState_invalidTime();
+            if (blinkShouldShow()) {
+                disp.clear(CS_HOUR);
+                disp.clear(CS_MINUTE15);
+                disp.clear(CS_MINUTE1);
+            } else {
+                showTime();
+            }
             break;
         case SHOW_TEMP:
             showTemp();
             break;
+        case SET_TIME:
+        case SET_ALARM1:
+        case SET_ALARM2:
         case SET_HOUR:
-            if (ppressed) {
-                settingHour++;
-                if (settingHour > 23) {
-                    settingHour = 0;
-                }
-            }
-            if (mpressed) {
-                settingHour--;
-                if (settingHour < 0) {
-                    settingHour = 23;
-                }
-            }
-
-            disp.showClockDigit(CS_MINUTE15, (settingMinute / 15));
-            disp.showClockDigit(CS_MINUTE1, (settingMinute % 15));
+        case SET_ALARM1_HOUR:
+        case SET_ALARM2_HOUR:
+            disp.showClockDigit(CS_MINUTE15, settingMinute / 15);
+            disp.showClockDigit(CS_MINUTE1, settingMinute % 15);
             if (blinkShouldShow()) {
                 disp.showClockDigit(CS_HOUR, settingHour);
             } else {
@@ -169,18 +435,8 @@ void loop() {
             }
             break;
         case SET_MINUTE:
-            if (ppressed) {
-                settingMinute++;
-                if (settingMinute == 60) {
-                    settingMinute = 0;
-                }
-            }
-            if (mpressed) {
-                settingMinute--;
-                if (settingMinute < 0) {
-                    settingMinute = 59;
-                }
-            }
+        case SET_ALARM1_MINUTE:
+        case SET_ALARM2_MINUTE:
             disp.showClockDigit(CS_HOUR, settingHour);
             if (blinkShouldShow()) {
                 disp.showClockDigit(CS_MINUTE15, settingMinute / 15);
@@ -190,100 +446,48 @@ void loop() {
                 disp.clear(CS_MINUTE1);
             }
             break;
+    }
+}
+
+void triggerButtonsHeld(uint8_t buttons) {
+    switch (state) {
         case SHOW_TIME:
-            if (ppressed) {
-                disp.brighten();
+            if (buttons & ClockButton::SET) {
+                settingHour = rtc.GetDateTime().Hour();
+                settingMinute = rtc.GetDateTime().Minute();
+                state = SET_TIME;
+            } else if (buttons & ClockButton::ALARM1) {
+                settingHour = rtc.GetAlarmOne().Hour();
+                settingMinute = rtc.GetAlarmOne().Minute();
+                state = SET_ALARM1;
+            } else if (buttons & ClockButton::ALARM2) {
+                settingHour = rtc.GetAlarmTwo().Hour();
+                settingMinute = rtc.GetAlarmTwo().Minute();
+                state = SET_ALARM2;
             }
-            if (mpressed) {
-                disp.dim();
+        case SET_HOUR:
+        case SET_ALARM1_HOUR:
+        case SET_ALARM2_HOUR:
+            if (buttons & ClockButton::PLUS) {
+                incrementSetHour();
+                delay(200);
+            } else if (buttons & ClockButton::MINUS) {
+                decrementSetHour();
+                delay(200);
             }
-        default:
-            reading = digitalRead(PIN_ALWAYSON) == HIGH;
-            Serial.print("alwayson = ");
-            Serial.println(reading);
-            Serial.println(millis() - lastShowTime);
-            if (ppressed || mpressed) {
-                state = SHOW_TIME;
-                showedTime = false;
+            break;
+        case SET_MINUTE:
+        case SET_ALARM1_MINUTE:
+        case SET_ALARM2_MINUTE:
+            if (buttons & ClockButton::PLUS) {
+                incrementSettingMinute();
+                delay(200);
+            } else if (buttons & ClockButton::MINUS) {
+                decrementSettingMinute();
+                delay(200);
             }
-            if (reading || state != HIDDEN_TIME) {
-                showTime();
-                if (!showedTime || reading) {
-                    lastShowTime = millis();
-                    showedTime = true;
-                }
-                if (millis() - lastShowTime > DISPLAY_TIMEOUT) {
-                    state = HIDDEN_TIME;
-                }
-            } else {
-                disp.clear(CS_HOUR);
-                disp.clear(CS_MINUTE15);
-                disp.clear(CS_MINUTE1);
-                disp.shutdown(); // saves power
-            }
+            break;
     }
-    showedTime = (state == SHOW_TIME);
-    delay(25);
-}
-
-void handleState_invalidTime() {
-    if (blinkShouldShow()) {
-        disp.clear(CS_HOUR);
-        disp.clear(CS_MINUTE15);
-        disp.clear(CS_MINUTE1);
-    } else {
-        showTime();
-    }
-}
-
-bool blinkShouldShow() {
-    static bool shouldShow = true;
-    static unsigned long lastBlink = millis();
-    if (millis() - lastBlink > 250) {
-        lastBlink = millis();
-        shouldShow = !shouldShow;
-    }
-    return shouldShow;
-}
-
-void saveSetTime(uint8_t h, uint8_t m) {
-    const RtcDateTime now = rtc.GetDateTime();
-    const RtcDateTime set = RtcDateTime(now.Year(), now.Month(), now.Day(), h, m, 0);
-    rtc.SetDateTime(set);
-}
-
-bool scanForPlus() {
-    static bool plusDown = false;
-    static bool plusHeld = false;
-    bool reading = digitalRead(PIN_PLUS) == HIGH;
-    bool rval = false;
-    if (reading == plusDown && plusDown) {
-        plusHeld = true;
-    } else if (reading == plusDown && !plusDown) {
-        if (plusHeld) {
-            plusHeld = false;
-            rval = true;
-        }
-    }
-    plusDown = reading;
-    return rval;
-}
-
-bool scanForMinus() {
-    static bool minusDown = false;
-    static bool minusHeld = false;
-    bool reading = digitalRead(PIN_MINUS) == HIGH;
-    bool rval = false;
-    if (reading == minusDown && minusDown) {
-        minusHeld = true;
-    } else if (reading == minusDown && !minusDown) {
-        if (minusHeld) {
-            minusHeld = false;
-            rval = true;
-        }
-    }
-    minusDown = reading;
-    return rval;
 }
 
 void showTemp() {
@@ -312,6 +516,11 @@ void showTemp() {
 
 void showTime() {
     static unsigned long lastTimeUpdate = 0;
+    static bool hourTrans = false;
+    static bool min16Trans = false;
+    static bool min1Trans = false;
+    static uint16_t transIndex = 8;
+
     if (millis() - lastTimeUpdate < TIME_UPDATE_DELAY) {
         return;
     }
