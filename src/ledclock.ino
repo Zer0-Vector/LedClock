@@ -37,7 +37,8 @@ enum ClockButton : uint8_t {
     ALARM1 = 0x08,
     ALARM2 = 0x10,
     TEMP = 0x20,
-    SNOOZE = 0x40
+    SNOOZE = 0x40,
+    ALWAYSON = 0x80
 };
 
 enum AlarmState : uint8_t {
@@ -93,11 +94,14 @@ void setup() {
     disp.begin();
 
     Serial.println(F("setup done"));
-    // Serial.end();
+    Serial.end();
 }
 
 static int8_t settingHour = 25;
 static int8_t settingMinute = 60;
+
+static unsigned long lastShowTime = millis();
+static bool shownTime = false;
 
 #define DISPLAY_TIMEOUT 5000
 #define TIME_UPDATE_DELAY 75
@@ -113,8 +117,7 @@ void loop() {
     uint8_t buttonsUp = queryButtonsState(&buttonsDown);
     uint8_t buttonsHoldTrigger = queryHoldState(buttonsDown);
 
-    if (buttonsDown > 0) {
-        triggerButtonsDown(buttonsDown);
+    triggerButtonsDown(buttonsDown);
     if (buttonsUp > 0) {
         triggerButtonsUp(buttonsUp);
     }
@@ -122,7 +125,17 @@ void loop() {
         triggerButtonsHeld(buttonsHoldTrigger);
     }
 
-    updateDisplay();
+    if (state != HIDDEN_TIME && 
+        shownTime && 
+        !(buttonsDown & ClockButton::ALWAYSON) && 
+        millis() - lastShowTime > DISPLAY_TIMEOUT)
+    {
+        state = HIDDEN_TIME;
+    } else if (state == HIDDEN_TIME && (buttonsDown & ClockButton::ALWAYSON)) {
+        state = SHOW_TIME;
+    }
+
+    updateDisplay(buttonsDown & ClockButton::ALWAYSON);
 
     delay(TICK_DELAY);
 }
@@ -134,14 +147,16 @@ void loop() {
 uint8_t queryButtonsState(uint8_t * buttonsDown) {
     static uint8_t lastReading = 0x00;
     uint8_t reading = 0x00;
-    reading |= queryButton(PIN_PLUS, PLUS);
-    reading |= queryButton(PIN_MINUS, MINUS);
-    reading |= queryButton(PIN_SET, SET);
-    reading |= queryButton(PIN_TEMP, TEMP);
+    reading |= queryButton(PIN_PLUS, ClockButton::PLUS);
+    reading |= queryButton(PIN_MINUS, ClockButton::MINUS);
+    reading |= queryButton(PIN_SET, ClockButton::SET);
+    reading |= queryButton(PIN_TEMP, ClockButton::TEMP);
+    reading |= queryButton(PIN_ALWAYSON, ClockButton::ALWAYSON);
     
     // reading |= queryButton(PIN_ALARM1, ALARM1);
     // reading |= queryButton(PIN_ALARM2, ALARM2);
     // reading |= queryButton(PIN_SNOOZE, SNOOZE);
+
     uint8_t rval = 0x00;
     for (uint16_t b = 1; b < 0x100; b <<= 1) {
         if ((reading & b) == (lastReading & b)) {
@@ -209,9 +224,6 @@ void triggerButtonsDown(uint8_t buttons) {
         if (state == SHOW_TIME) {
             state = SHOW_ALARM2;
         }
-    }
-    if (state == HIDDEN_TIME) {
-        state = SHOW_TIME;
     }
 }
 
@@ -396,10 +408,20 @@ void saveAlarm2() {
     // TODO
 }
 
-void updateDisplay() {
+void updateDisplay(bool alwaysOn) {
     switch (state) {
+        case HIDDEN_TIME:
+            disp.clear(CS_HOUR);
+            disp.clear(CS_MINUTE15);
+            disp.clear(CS_MINUTE1);
+            disp.shutdown();
+            break;
         case SHOW_TIME:
             showTime();
+            if (!shownTime || alwaysOn) {
+                shownTime = true;
+                lastShowTime = millis();
+            }
             break;
         case INVALID_TIME:
             if (blinkShouldShow()) {
@@ -439,6 +461,9 @@ void updateDisplay() {
                 disp.clear(CS_MINUTE1);
             }
             break;
+    }
+    if (state != SHOW_TIME) {
+        shownTime = false;
     }
 }
 
