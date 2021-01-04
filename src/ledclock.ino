@@ -3,14 +3,27 @@
 
 #include <ClockDisplay.h>
 
+#define PIN_SERIAL_DATA 12
+#define PIN_SERIAL_CS 10
+#define PIN_SERIAL_CLK 11
+
+// I2C: SDA=A4, SCL=A5
 static RtcDS3231<TwoWire> rtc = RtcDS3231<TwoWire>(Wire);
-static ClockDisplay disp = ClockDisplay(12, 11, 10);
+static ClockDisplay disp = ClockDisplay(PIN_SERIAL_DATA, PIN_SERIAL_CLK, PIN_SERIAL_CS);
 
 #define PIN_TEMP 13
 #define PIN_SET 3
 #define PIN_PLUS 4
 #define PIN_MINUS 5
 #define PIN_ALWAYSON 6
+#define PIN_ALARM1 7
+#define PIN_ALARM2 8
+#define PIN_SNOOZE 9
+
+#define POUT_PM_LED A0
+#define POUT_ALARM1_LED A1
+#define POUT_ALARM2_LED A2
+#define POUT_ALARM_TRIGGER A3
 
 #define HOUR_BASE 12
 #define MINUTE_BASE 16
@@ -58,17 +71,18 @@ void setup() {
     pinMode(PIN_PLUS, INPUT);
     pinMode(PIN_MINUS, INPUT);
     pinMode(PIN_ALWAYSON, INPUT);
+    pinMode(PIN_ALARM1, INPUT);
+    pinMode(PIN_ALARM2, INPUT);
+    pinMode(PIN_SNOOZE, INPUT);
+    
+    pinMode(POUT_PM_LED, OUTPUT);
+    pinMode(POUT_ALARM1_LED, OUTPUT);
+    pinMode(POUT_ALARM2_LED, OUTPUT);
+    pinMode(POUT_ALARM_TRIGGER, OUTPUT);
 
     // unused pins
     pinMode(0, INPUT_PULLUP);
     pinMode(1, INPUT_PULLUP);
-    pinMode(7, INPUT_PULLUP);
-    pinMode(8, INPUT_PULLUP);
-    pinMode(9, INPUT_PULLUP);
-    pinMode(A0, INPUT_PULLUP);
-    pinMode(A1, INPUT_PULLUP);
-    pinMode(A2, INPUT_PULLUP);
-    pinMode(A3, INPUT_PULLUP);
     pinMode(A6, INPUT_PULLUP);
     pinMode(A7, INPUT_PULLUP);
 
