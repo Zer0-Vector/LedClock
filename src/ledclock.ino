@@ -1,5 +1,6 @@
 #include <Wire.h>
 #include <RtcDS3231.h>
+#include <EEPROM.h>
 
 #include <ClockDisplay.h>
 
@@ -20,10 +21,23 @@ static ClockDisplay disp = ClockDisplay(PIN_SERIAL_DATA, PIN_SERIAL_CLK, PIN_SER
 #define PIN_ALARM2 8
 #define PIN_SNOOZE 9
 
+#define PIN_ALARM_INTERRUPT 2
+#define ALARM_INTERRUPT_NUMBER 0
+
 #define POUT_PM_LED A0
 #define POUT_ALARM1_LED A1
 #define POUT_ALARM2_LED A2
-#define POUT_ALARM_TRIGGER A3
+
+#define POUT_ALARM_BUZZER A3
+
+#define ALARM1_EEPROM_ADDR 0
+#define ALARM2_EEPROM_ADDR sizeof(uint16_t)
+#define ALARM_EEPROM_MASK 0xF0C0
+#define ALARM_EEPROM_MASK_REMOVER 0x0F3F
+
+#define ALARM_ENABLED_STATE_EEPROM_ADDR 2*sizeof(uint16_t)
+#define ALARM_ENABLED_STATE_MASK 0xAC
+#define ALARM_ENABLED_STATE_MASK_REMOVER 0x03
 
 #define HOUR_BASE 12
 #define MINUTE_BASE 16
@@ -58,12 +72,20 @@ enum ClockButton : uint8_t {
 };
 
 enum AlarmState : uint8_t {
-    SILENT = 0x00,
+    ALARMS_OFF = 0x00,
     ALARM1_ON = 0x01,
     ALARM2_ON = 0x02,
+    ALARM1_TRIGGERED = 0x04,
+    ALARM2_TRIGGERED = 0x08,
     ALARM1_SNOOZE = 0x10,
-    ALARM2_SNOOZE = 0x20
-} alarmSoundState;
+    ALARM2_SNOOZE = 0x20,
+    ALARM1_SNOOZE_TRIGGERED = 0x40,
+    ALARM2_SNOOZE_TRIGGERED = 0x80
+};
+uint8_t alarmState = AlarmState::ALARMS_OFF;
+
+static int8_t settingHour = 24;
+static int8_t settingMinute = 60;
 
 void setup() {
     pinMode(PIN_TEMP, INPUT);
@@ -78,7 +100,7 @@ void setup() {
     pinMode(POUT_PM_LED, OUTPUT);
     pinMode(POUT_ALARM1_LED, OUTPUT);
     pinMode(POUT_ALARM2_LED, OUTPUT);
-    pinMode(POUT_ALARM_TRIGGER, OUTPUT);
+    pinMode(POUT_ALARM_BUZZER, OUTPUT);
 
     // unused pins
     pinMode(0, INPUT_PULLUP);
@@ -101,12 +123,28 @@ void setup() {
         state = SHOW_TIME;
     }
 
+    rtc.SetSquareWavePin(DS3231SquareWavePin_ModeAlarmBoth);
+    rtc.Enable32kHzPin(false);
+
+    rtc.LatchAlarmsTriggeredFlags(); // discard any current alarm flags
+    attachInterrupt(ALARM_INTERRUPT_NUMBER, alarmInterruptTriggered, FALLING);
+
     if (!rtc.GetIsRunning()) {
         rtc.SetIsRunning(true);
     }
 
-    rtc.SetSquareWavePin(DS3231SquareWavePin_ModeNone);
-    rtc.Enable32kHzPin(false);
+    // load alarm times from EEPROM in case power off was during snooze
+    reloadAlarmSetTime(ALARM1_EEPROM_ADDR, saveAlarm1);
+    reloadAlarmSetTime(ALARM2_EEPROM_ADDR, saveAlarm2);
+    uint8_t savedState = 0x0;
+    EEPROM.get(ALARM_ENABLED_STATE_EEPROM_ADDR, savedState);
+    if (savedState & ALARM_ENABLED_STATE_MASK) {
+        alarmState = savedState & ALARM_ENABLED_STATE_MASK_REMOVER;
+    }
+
+    settingHour = 25;
+    settingMinute = 61;
+
 
     disp.begin();
 
@@ -114,8 +152,24 @@ void setup() {
     Serial.end();
 }
 
-static int8_t settingHour = 25;
-static int8_t settingMinute = 60;
+void reloadAlarmSetTime(uint8_t addr, void (*save)(bool)) {
+    uint16_t savedTimeData = 0;
+    EEPROM.get(addr, savedTimeData);
+    if (savedTimeData & ALARM_EEPROM_MASK) { // validate
+        // remove mask
+        savedTimeData &= ALARM_EEPROM_MASK_REMOVER;
+        
+        settingMinute = 0xFF;
+        settingMinute &= (uint8_t)(savedTimeData);
+        
+        settingHour = 0xFF;
+        settingHour &= (uint8_t)(savedTimeData >> 8);
+
+        if (settingHour < 12 && settingMinute < 60) { // just making sure
+            save(false);
+        }
+    }
+}
 
 static unsigned long lastShowTime = millis();
 static bool shownTime = false;
@@ -127,6 +181,8 @@ static bool shownTime = false;
 #define BLINK_DELAY 250
 #define BLINK_DELAYx2 500
 
+volatile bool interruptFlag = false;
+volatile uint16_t interruptCount = 0;
 
 void loop() {
     static uint8_t buttonsDown = 0x00;
@@ -155,6 +211,12 @@ void loop() {
     updateDisplay(buttonsDown & ClockButton::ALWAYSON);
 
     delay(TICK_DELAY);
+}
+
+
+void ISR_ATTR alarmInterruptTriggered() {
+    interruptCount++;
+    interruptFlag = true;
 }
 
 /**
@@ -320,7 +382,7 @@ void triggerButtonsUp(uint8_t buttons) {
         case SET_ALARM1_MINUTE:
             if (buttons & ClockButton::SET) {
                 state = SHOW_TIME;
-                saveAlarm1();
+                saveAlarm1(true);
                 break;
             }
             if (buttons & ClockButton::PLUS) {
@@ -350,7 +412,7 @@ void triggerButtonsUp(uint8_t buttons) {
         case SET_ALARM2_MINUTE:
             if (buttons & ClockButton::SET) {
                 state = SHOW_TIME;
-                saveAlarm2();
+                saveAlarm2(true);
                 break;
             }
             if (buttons & ClockButton::PLUS) {
@@ -417,12 +479,43 @@ void saveSetTime() {
     rtc.SetDateTime(set);
 }
 
-void saveAlarm1() {
-    // TODO
+void saveAlarm1(bool writeEeprom) {
+    const DS3231AlarmOne alarmSetting = DS3231AlarmOne(
+        0, // day
+        settingHour, 
+        settingMinute, 
+        0, // seconds
+        DS3231AlarmOneControl_HoursMinutesSecondsMatch // trigger once a day
+    );
+    rtc.SetAlarmOne(alarmSetting);
+    if (writeEeprom) {
+        if (rtc.LastError() == 0) {
+            uint16_t savedTime = ((uint16_t)(settingHour << 8) + (uint16_t)settingMinute) | ALARM_EEPROM_MASK;
+            EEPROM.put(ALARM1_EEPROM_ADDR, savedTime);
+        } else {
+            Serial.print(F("rtc.SetAlarmOne error = "));
+            Serial.println(rtc.LastError());
+        }
+    }
 }
 
-void saveAlarm2() {
-    // TODO
+void saveAlarm2(bool writeEeprom) {
+    const DS3231AlarmTwo alarmSetting = DS3231AlarmTwo(
+        0, // day
+        settingHour, 
+        settingMinute, 
+        DS3231AlarmTwoControl_HoursMinutesMatch // trigger once a day
+    );
+    rtc.SetAlarmTwo(alarmSetting);
+    if (writeEeprom) {
+        if (rtc.LastError() == 0) {
+            uint16_t savedTime = ((uint16_t)(settingHour << 8) + (uint16_t)settingMinute) | ALARM_EEPROM_MASK;
+            EEPROM.put(ALARM2_EEPROM_ADDR, savedTime);
+        } else {
+            Serial.print(F("rtc.SetAlarmTwo error = "));
+            Serial.println(rtc.LastError());
+        }
+    }
 }
 
 void updateDisplay(bool alwaysOn) {
