@@ -130,7 +130,7 @@ void setup() {
     disp.begin();
 
     Serial.println(F("setup done"));
-    Serial.end();
+    // Serial.end();
 }
 
 static unsigned long lastShowTime = millis();
@@ -186,6 +186,7 @@ void ISR_ATTR alarmInterruptTriggered() {
 
 void checkAlarmState() {
     if (interruptFlag) {
+        Serial.println(F("Interrupted!"));
         DS3231AlarmFlag aflag = rtc.LatchAlarmsTriggeredFlags();
         interruptFlag = false;
 
@@ -217,8 +218,10 @@ void checkAlarmState() {
 inline void soundAlarm() {
     static unsigned long lastToneTime = millis();
     if (millis() - lastToneTime > ALARM_TONE_DELAY) {
+        Serial.println(F("ALARM silent"));
         noTone(POUT_ALARM_BUZZER);
     } else {
+        Serial.println(F("ALARM BEEP"));
         tone(POUT_ALARM_BUZZER, ALARM_TONE_FREQ);
     }
 }
