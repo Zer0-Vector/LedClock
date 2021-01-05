@@ -6,11 +6,14 @@
 static RtcDS3231<TwoWire> rtc = RtcDS3231<TwoWire>(Wire);
 static ClockDisplay disp = ClockDisplay(12, 11, 10);
 
-#define PIN_TEMP 2
+#define PIN_TEMP 13
 #define PIN_SET 3
 #define PIN_PLUS 4
 #define PIN_MINUS 5
 #define PIN_ALWAYSON 6
+
+#define HOUR_BASE 12
+#define MINUTE_BASE 16
 
 enum ClockState {
     SHOW_TIME,
@@ -412,8 +415,8 @@ void updateDisplay(bool alwaysOn) {
     switch (state) {
         case HIDDEN_TIME:
             disp.clear(CS_HOUR);
-            disp.clear(CS_MINUTE15);
-            disp.clear(CS_MINUTE1);
+            disp.clear(CS_MINUTE_HIGH);
+            disp.clear(CS_MINUTE_LOW);
             disp.shutdown();
             break;
         case SHOW_TIME:
@@ -426,8 +429,8 @@ void updateDisplay(bool alwaysOn) {
         case INVALID_TIME:
             if (blinkShouldShow()) {
                 disp.clear(CS_HOUR);
-                disp.clear(CS_MINUTE15);
-                disp.clear(CS_MINUTE1);
+                disp.clear(CS_MINUTE_HIGH);
+                disp.clear(CS_MINUTE_LOW);
             } else {
                 showTime();
             }
@@ -441,10 +444,10 @@ void updateDisplay(bool alwaysOn) {
         case SET_HOUR:
         case SET_ALARM1_HOUR:
         case SET_ALARM2_HOUR:
-            disp.showClockDigit(CS_MINUTE15, settingMinute / 15);
-            disp.showClockDigit(CS_MINUTE1, settingMinute % 15);
+            disp.showClockDigit(CS_MINUTE_HIGH, convertToHighMinuteDigit(settingMinute));
+            disp.showClockDigit(CS_MINUTE_LOW, convertToLowMinuteDigit(settingMinute));
             if (blinkShouldShow()) {
-                disp.showClockDigit(CS_HOUR, settingHour);
+                disp.showClockDigit(CS_HOUR, convertToHourDigit(settingHour));
             } else {
                 disp.clear(CS_HOUR);
             }
@@ -452,18 +455,34 @@ void updateDisplay(bool alwaysOn) {
         case SET_MINUTE:
         case SET_ALARM1_MINUTE:
         case SET_ALARM2_MINUTE:
-            disp.showClockDigit(CS_HOUR, settingHour);
+            disp.showClockDigit(CS_HOUR, convertToHourDigit(settingHour));
             if (blinkShouldShow()) {
-                disp.showClockDigit(CS_MINUTE15, settingMinute / 15);
-                disp.showClockDigit(CS_MINUTE1, settingMinute % 15);
+                disp.showClockDigit(CS_MINUTE_HIGH, convertToHighMinuteDigit(settingMinute));
+                disp.showClockDigit(CS_MINUTE_LOW, convertToLowMinuteDigit(settingMinute));
             } else {
-                disp.clear(CS_MINUTE15);
-                disp.clear(CS_MINUTE1);
+                disp.clear(CS_MINUTE_HIGH);
+                disp.clear(CS_MINUTE_LOW);
             }
             break;
     }
     if (state != SHOW_TIME) {
         shownTime = false;
+    }
+}
+
+inline uint8_t convertToHighMinuteDigit(uint8_t min) {
+    return min / MINUTE_BASE;
+}
+
+inline uint8_t convertToLowMinuteDigit(uint8_t min) {
+    return min % MINUTE_BASE;
+}
+
+inline uint8_t convertToHourDigit(uint8_t hour) {
+    if (hour % HOUR_BASE == 0) {
+        return HOUR_BASE;
+    } else {
+        return hour % HOUR_BASE;
     }
 }
 
@@ -516,19 +535,19 @@ void showTemp() {
     
     // in base 10
     if (tinf < 0 ) {
-        disp.showCharacter(CS_MINUTE15, '-');
+        disp.showCharacter(CS_MINUTE_HIGH, '-');
     } else if (tinf > 100) {
-        disp.showCharacter(CS_MINUTE15, '+');
+        disp.showCharacter(CS_MINUTE_HIGH, '+');
     } else {
-        disp.showCharacter(CS_MINUTE15, '0' + (tinf / 10));
+        disp.showCharacter(CS_MINUTE_HIGH, '0' + (tinf / 10));
     }
     
     if (tinf <= -10) {
-        disp.showCharacter(CS_MINUTE1, 'L');
+        disp.showCharacter(CS_MINUTE_LOW, 'L');
     } else if (tinf >= 100) {
-        disp.showCharacter(CS_MINUTE1, 'H');
+        disp.showCharacter(CS_MINUTE_LOW, 'H');
     } else {
-        disp.showCharacter(CS_MINUTE1, '0' + (tinf % 10));
+        disp.showCharacter(CS_MINUTE_LOW, '0' + (tinf % 10));
     }
 }
 
@@ -547,7 +566,7 @@ void showTime() {
     }
     lastTimeUpdate = millis();
     RtcDateTime now = rtc.GetDateTime();
-    uint8_t hour = now.Hour() % 24;
+    uint8_t hour = now.Hour();
     uint8_t minute = now.Minute();
 
     if (transIndex >= 8) {
@@ -558,30 +577,27 @@ void showTime() {
 
     if (minute != lastMinute) {
         min1Trans = true;
-        min16Trans = (minute / 15) != (lastMinute / 15);
+        min16Trans = (minute / MINUTE_BASE) != (lastMinute / MINUTE_BASE);
         hourTrans = hour != lastHour;
         transIndex = 0;
     }
 
-    uint8_t min15 = (minute / 15);
-    uint8_t min1 = minute % 15;
-
     if (min1Trans) {
-        disp.showTransition(CS_MINUTE1, transIndex, min1);
+        disp.showTransition(CS_MINUTE_LOW, transIndex, convertToLowMinuteDigit(minute));
     } else {
-        disp.showClockDigit(CS_MINUTE1, min1);
+        disp.showClockDigit(CS_MINUTE_LOW, convertToLowMinuteDigit(minute));
     }
 
     if (min16Trans) {
-        disp.showTransition(CS_MINUTE15, transIndex, min15);
+        disp.showTransition(CS_MINUTE_HIGH, transIndex, convertToHighMinuteDigit(minute));
     } else {
-        disp.showClockDigit(CS_MINUTE15, min15);
+        disp.showClockDigit(CS_MINUTE_HIGH, convertToHighMinuteDigit(minute));
     }
     
     if (hourTrans) {
-        disp.showTransition(CS_HOUR, transIndex, hour);
+        disp.showTransition(CS_HOUR, transIndex, convertToHourDigit(hour));
     } else {
-        disp.showClockDigit(CS_HOUR, hour);
+        disp.showClockDigit(CS_HOUR, convertToHourDigit(hour));
     }
     transIndex++;
     lastMinute = minute;

@@ -4,8 +4,8 @@
 #include <LedControl.h>
 
 #define CS_HOUR 2
-#define CS_MINUTE15 1
-#define CS_MINUTE1 0
+#define CS_MINUTE_HIGH 1
+#define CS_MINUTE_LOW 0
 
 class ClockDisplay {
     public:

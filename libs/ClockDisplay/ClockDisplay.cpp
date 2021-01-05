@@ -7,8 +7,8 @@ ClockDisplay::ClockDisplay(int dataPin, int clockPin, int csPin) {
     _brightness = 0;
     _isShutdown = true;
     _currentDisplay = (wchar_t*)calloc(3, sizeof(wchar_t));
-    _currentDisplay[CS_MINUTE1] = ' ';
-    _currentDisplay[CS_MINUTE15] = ' ';
+    _currentDisplay[CS_MINUTE_LOW] = ' ';
+    _currentDisplay[CS_MINUTE_HIGH] = ' ';
     _currentDisplay[CS_HOUR] = ' ';
 }
 
@@ -36,8 +36,8 @@ void ClockDisplay::dim() {
 
 void ClockDisplay::begin() {
     _ledctrl->clearDisplay(CS_HOUR);
-    _ledctrl->clearDisplay(CS_MINUTE15);
-    _ledctrl->clearDisplay(CS_MINUTE1);
+    _ledctrl->clearDisplay(CS_MINUTE_HIGH);
+    _ledctrl->clearDisplay(CS_MINUTE_LOW);
 
     shutdown();
     delay(1000);
@@ -46,15 +46,15 @@ void ClockDisplay::begin() {
     _updateBrightness();
 
     clear(CS_HOUR);
-    clear(CS_MINUTE15);
-    clear(CS_MINUTE1);
+    clear(CS_MINUTE_HIGH);
+    clear(CS_MINUTE_LOW);
 }
 
 void ClockDisplay::_updateBrightness() {
     if (_isShutdown) startup();
     _ledctrl->setIntensity(CS_HOUR, _brightness);
-    _ledctrl->setIntensity(CS_MINUTE15, _brightness);
-    _ledctrl->setIntensity(CS_MINUTE1, _brightness);
+    _ledctrl->setIntensity(CS_MINUTE_HIGH, _brightness);
+    _ledctrl->setIntensity(CS_MINUTE_LOW, _brightness);
 }
 
 void ClockDisplay::showClockDigit(uint8_t pos, uint8_t digit) {
@@ -63,22 +63,22 @@ void ClockDisplay::showClockDigit(uint8_t pos, uint8_t digit) {
 }
 
 wchar_t ClockDisplay::digitToChar(uint8_t pos, uint8_t d) {
-    if (pos == CS_MINUTE15) {
-        switch (d) {
-            case 0:
-                return L'╗';
-            case 1:
-                return L'╝';
-            case 2:
-                return L'╚';
-            case 3:
-                return L'╔';
-        }
-    }
+    // if (pos == CS_MINUTE_HIGH) {
+    //     switch (d) {
+    //         case 0:
+    //             return L'╗';
+    //         case 1:
+    //             return L'╝';
+    //         case 2:
+    //             return L'╚';
+    //         case 3:
+    //             return L'╔';
+    //     }
+    // }
 
-    if (pos == CS_HOUR) {
-        return 'a' + d;
-    }
+    // if (pos == CS_HOUR) {
+    //     return 'a' + d;
+    // }
 
     if (d < 10) {
         return '0' + d;
@@ -112,15 +112,15 @@ void ClockDisplay::showCharTransition(uint8_t pos, uint8_t index, wchar_t next) 
 
 void ClockDisplay::shutdown() {
     _ledctrl->shutdown(CS_HOUR, true);
-    _ledctrl->shutdown(CS_MINUTE15, true);
-    _ledctrl->shutdown(CS_MINUTE1, true);
+    _ledctrl->shutdown(CS_MINUTE_HIGH, true);
+    _ledctrl->shutdown(CS_MINUTE_LOW, true);
     _isShutdown = true;
 }
 
 void ClockDisplay::startup() {
     _ledctrl->shutdown(CS_HOUR, false);
-    _ledctrl->shutdown(CS_MINUTE15, false);
-    _ledctrl->shutdown(CS_MINUTE1, false);
+    _ledctrl->shutdown(CS_MINUTE_HIGH, false);
+    _ledctrl->shutdown(CS_MINUTE_LOW, false);
     _isShutdown = false;
 }
 
