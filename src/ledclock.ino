@@ -36,8 +36,8 @@ static ClockDisplay disp = ClockDisplay(PIN_SERIAL_DATA, PIN_SERIAL_CLK, PIN_SER
 #define ALARM_EEPROM_MASK_REMOVER 0x0F3F
 
 #define ALARM_ENABLED_STATE_EEPROM_ADDR 2*sizeof(uint16_t)
-#define ALARM_ENABLED_STATE_MASK 0xAC
-#define ALARM_ENABLED_STATE_MASK_REMOVER 0x03
+#define ALARM_ENABLED_STATE_MASK 0xEE
+#define ALARM_ENABLED_STATE_MASK_REMOVER 0x11
 
 #define HOUR_BASE 12
 #define MINUTE_BASE 16
@@ -73,15 +73,17 @@ enum ClockButton : uint8_t {
 
 enum AlarmState : uint8_t {
     ALARMS_OFF = 0x00,
+    
     ALARM1_ON = 0x01,
-    ALARM2_ON = 0x02,
-    ALARM1_TRIGGERED = 0x04,
-    ALARM2_TRIGGERED = 0x08,
-    ALARM1_SNOOZE = 0x10,
-    ALARM2_SNOOZE = 0x20,
-    ALARM1_SNOOZE_TRIGGERED = 0x40,
-    ALARM2_SNOOZE_TRIGGERED = 0x80
+    ALARM1_TRIGGERED = 0x02,
+    ALARM1_SNOOZE = 0x04,
+
+    ALARM2_ON = 0x10,
+    ALARM2_TRIGGERED = 0x20,
+    ALARM2_SNOOZE = 0x40
 };
+#define ALARM1_PASSTHROUGH_MASK 0x0F
+#define ALARM2_PASSTHROUGH_MASK 0xF0
 uint8_t alarmState = AlarmState::ALARMS_OFF;
 
 static int8_t settingHour = 24;
@@ -153,21 +155,8 @@ void setup() {
 }
 
 void reloadAlarmSetTime(uint8_t addr, void (*save)(bool)) {
-    uint16_t savedTimeData = 0;
-    EEPROM.get(addr, savedTimeData);
-    if (savedTimeData & ALARM_EEPROM_MASK) { // validate
-        // remove mask
-        savedTimeData &= ALARM_EEPROM_MASK_REMOVER;
-        
-        settingMinute = 0xFF;
-        settingMinute &= (uint8_t)(savedTimeData);
-        
-        settingHour = 0xFF;
-        settingHour &= (uint8_t)(savedTimeData >> 8);
-
-        if (settingHour < 12 && settingMinute < 60) { // just making sure
-            save(false);
-        }
+    if (loadAlarmFromEeprom(addr)) {
+        save(false);
     }
 }
 
@@ -321,12 +310,12 @@ void triggerButtonsUp(uint8_t buttons) {
                 disp.dim();
             }
             if (buttons & ClockButton::ALARM1) {
-                // TODO
                 // enable alarm1
+                updateAlarmEnabledState(AlarmState::ALARM1_ON);
             }
             if (buttons & ClockButton::ALARM2) {
-                // TODO
                 // enable alarm2
+                updateAlarmEnabledState(AlarmState::ALARM2_ON); 
             }
             break;
         case HIDDEN_TIME: // should't happen, but will recover if it does.
@@ -433,6 +422,11 @@ void triggerButtonsUp(uint8_t buttons) {
             }
             break;
     }
+}
+
+void updateAlarmEnabledState(AlarmState update) {
+    alarmState ^= update;
+    EEPROM.write(ALARM_ENABLED_STATE_EEPROM_ADDR, alarmState | ALARM_ENABLED_STATE_MASK);
 }
 
 void incrementSetHour() {
@@ -601,13 +595,13 @@ void triggerButtonsHeld(uint8_t buttons) {
                 settingMinute = rtc.GetDateTime().Minute();
                 state = SET_TIME;
             } else if (buttons & ClockButton::ALARM1) {
-                settingHour = rtc.GetAlarmOne().Hour();
-                settingMinute = rtc.GetAlarmOne().Minute();
-                state = SET_ALARM1;
+                if (loadAlarmFromEeprom(ALARM1_EEPROM_ADDR)) {
+                    state = SET_ALARM1;
+                }
             } else if (buttons & ClockButton::ALARM2) {
-                settingHour = rtc.GetAlarmTwo().Hour();
-                settingMinute = rtc.GetAlarmTwo().Minute();
-                state = SET_ALARM2;
+                if (loadAlarmFromEeprom(ALARM2_EEPROM_ADDR)) {
+                    state = SET_ALARM2;
+                }
             }
         case SET_HOUR:
         case SET_ALARM1_HOUR:
@@ -632,6 +626,21 @@ void triggerButtonsHeld(uint8_t buttons) {
             }
             break;
     }
+}
+
+bool loadAlarmFromEeprom(uint8_t addr) {
+    uint16_t savedTimeData = 0;
+    EEPROM.get(addr, savedTimeData);
+    if (savedTimeData & ALARM_EEPROM_MASK) { // validate
+        // remove mask
+        savedTimeData &= ALARM_EEPROM_MASK_REMOVER;
+        
+        settingMinute = (uint8_t)(savedTimeData & 0x00FF);
+        settingHour = (uint8_t)(savedTimeData >> 8);
+
+        return settingHour < 12 && settingMinute < 60;
+    }
+    return false;
 }
 
 void showTemp() {
