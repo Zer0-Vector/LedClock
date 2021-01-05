@@ -1,0 +1,13 @@
+@startuml alarm-states
+
+[*] --> ALARM_OFF
+ALARM_OFF --> ALARM_ON : alarm
+ALARM_ON --> ALARM_OFF : alarm
+ALARM_ON : enter/update saved alarm state
+ALARM_OFF : enter/update saved alarm state
+ALARM_ON --> ALARM_TRIGGERED : trigger
+ALARM_TRIGGERED --> ALARM_SNOOZE : snooze
+ALARM_SNOOZE --> ALARM_TRIGGERED : trigger
+ALARM_TRIGGERED --> ALARM_ON : time, temp, plus, minus
+
+@enduml
