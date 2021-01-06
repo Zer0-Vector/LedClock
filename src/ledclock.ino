@@ -30,7 +30,7 @@ static ClockDisplay disp = ClockDisplay(PIN_SERIAL_DATA, PIN_SERIAL_CLK, PIN_SER
 #define POUT_ALARM_BUZZER A3
 
 #define ALARM_TONE_DELAY 150
-#define ALARM_TONE_FREQ (unsigned int)440000
+#define ALARM_TONE_FREQ (unsigned int)440
 
 #define HOUR_BASE 12
 #define MINUTE_BASE 16
@@ -126,7 +126,6 @@ void setup() {
         rtc.SetIsRunning(true);
     }
 
-
     disp.begin();
 
     Serial.println(F("setup done"));
@@ -151,12 +150,20 @@ void loop() {
     uint8_t buttonsUp = queryButtonsState(&buttonsDown);
     uint8_t buttonsHoldTrigger = queryHoldState(buttonsDown);
 
+    if (buttonsDown > 0) {
+        Serial.print("down:");
+        Serial.println(buttonsDown, BIN);
+    }
     // detect button presses
     triggerButtonsDown(buttonsDown);
     if (buttonsUp > 0) {
+        Serial.print("up:");
+        Serial.println(buttonsUp, BIN);
         triggerButtonsUp(buttonsUp);
     }
     if (buttonsHoldTrigger > 0) {
+        Serial.print("held:");
+        Serial.println(buttonsHoldTrigger, BIN);
         triggerButtonsHeld(buttonsHoldTrigger);
     }
 
@@ -190,11 +197,17 @@ void checkAlarmState() {
         DS3231AlarmFlag aflag = rtc.LatchAlarmsTriggeredFlags();
         interruptFlag = false;
 
+        Serial.println(F("current alarm1State"));
+        Serial.println(alarm1State);
         if ((aflag & DS3231AlarmFlag::DS3231AlarmFlag_Alarm1) && alarm1State != AlarmState::ALARM_OFF) {
             alarm1State = AlarmState::ALARM_TRIGGERED;
+            Serial.println(F("alarm1 triggered!"));
         }
+        Serial.println(F("current alarm2State"));
+        Serial.println(alarm2State);
         if ((aflag & DS3231AlarmFlag::DS3231AlarmFlag_Alarm2) && alarm2State != AlarmState::ALARM_OFF) {
             alarm2State = AlarmState::ALARM_TRIGGERED;
+            Serial.println(F("alarm2 triggered!"));
         }
     }
 
@@ -220,6 +233,7 @@ inline void soundAlarm() {
     if (millis() - lastToneTime > ALARM_TONE_DELAY) {
         Serial.println(F("ALARM silent"));
         noTone(POUT_ALARM_BUZZER);
+        lastToneTime = millis();
     } else {
         Serial.println(F("ALARM BEEP"));
         tone(POUT_ALARM_BUZZER, ALARM_TONE_FREQ);
@@ -242,10 +256,9 @@ uint8_t queryButtonsState(uint8_t * buttonsDown) {
     reading |= queryButton(PIN_SET, ClockButton::SET);
     reading |= queryButton(PIN_TEMP, ClockButton::TEMP);
     reading |= queryButton(PIN_ALWAYSON, ClockButton::ALWAYSON);
-    
-    // reading |= queryButton(PIN_ALARM1, ALARM1);
-    // reading |= queryButton(PIN_ALARM2, ALARM2);
-    // reading |= queryButton(PIN_SNOOZE, SNOOZE);
+    reading |= queryButton(PIN_ALARM1, ClockButton::ALARM1);
+    reading |= queryButton(PIN_ALARM2, ClockButton::ALARM2);
+    reading |= queryButton(PIN_SNOOZE, ClockButton::SNOOZE);
 
     uint8_t rval = 0x00;
     for (uint16_t b = 1; b < 0x100; b <<= 1) {
@@ -331,21 +344,31 @@ void triggerButtonsUp(uint8_t buttons) {
             if (buttons & ClockButton::MINUS) {
                 disp.dim();
             }
+            break;
+        case SHOW_ALARM1:
             if (buttons & ClockButton::ALARM1) {
                 // toggle alarm1
                 if (alarm1State == AlarmState::ALARM_OFF) {
                     alarm1State = AlarmState::ALARM_ON;
+                    Serial.println(F("alarm1 on"));
                 } else if (alarm1State == AlarmState::ALARM_ON) {
                     alarm1State = AlarmState::ALARM_OFF;
+                    Serial.println(F("alarm1 off"));
                 }
+                state = SHOW_TIME;
             }
+            break;
+        case SHOW_ALARM2:
             if (buttons & ClockButton::ALARM2) {
                 // toggle alarm2
                 if (alarm2State == AlarmState::ALARM_OFF) {
                     alarm2State = AlarmState::ALARM_ON;
+                    Serial.println(F("alarm2 on"));
                 } else if (alarm2State == AlarmState::ALARM_ON) {
                     alarm2State = AlarmState::ALARM_OFF;
+                    Serial.println(F("alarm2 off"));
                 }
+                state = SHOW_TIME;
             }
             break;
         case HIDDEN_TIME: // should't happen, but will recover if it does.
@@ -382,7 +405,7 @@ void triggerButtonsUp(uint8_t buttons) {
             }
             break;
         case SET_ALARM1:
-            if (buttons & ClockButton::SET) {
+            if (buttons & ClockButton::ALARM1) {
                 state = SET_ALARM1_HOUR;
             }
             break;
@@ -412,7 +435,7 @@ void triggerButtonsUp(uint8_t buttons) {
             }
             break;
         case SET_ALARM2:
-            if (buttons & ClockButton::SET) {
+            if (buttons & ClockButton::ALARM2) {
                 state = SET_ALARM2_HOUR;
             }
             break;
@@ -439,16 +462,6 @@ void triggerButtonsUp(uint8_t buttons) {
             }
             if (buttons & ClockButton::MINUS) {
                 decrementSettingMinute();
-            }
-            break;
-        case SHOW_ALARM1:
-            if (buttons & ClockButton::ALARM1) {
-                state = SHOW_TIME;
-            }
-            break;
-        case SHOW_ALARM2:
-            if (buttons & ClockButton::ALARM2) {
-                state = SHOW_TIME;
             }
             break;
     }
@@ -517,6 +530,9 @@ void saveSetTime() {
 }
 
 void saveAlarm1() {
+    Serial.println(F("Saving alarm 1"));
+    Serial.println(settingHour);
+    Serial.println(settingMinute);
     const DS3231AlarmOne alarmSetting = DS3231AlarmOne(
         0, // day
         settingHour, 
@@ -528,6 +544,9 @@ void saveAlarm1() {
 }
 
 void saveAlarm2() {
+    Serial.println(F("Saving alarm 2"));
+    Serial.println(settingHour);
+    Serial.println(settingMinute);
     const DS3231AlarmTwo alarmSetting = DS3231AlarmTwo(
         0, // day
         settingHour, 
@@ -563,6 +582,24 @@ void updateDisplay(bool alwaysOn) {
             break;
         case SHOW_TEMP:
             showTemp();
+            break;
+        case SHOW_ALARM1:
+            Serial.println("Showing ALARM1");
+            {
+                DS3231AlarmOne a1 = rtc.GetAlarmOne();
+                disp.showClockDigit(CS_HOUR, convertToHourDigit(a1.Hour()));
+                disp.showClockDigit(CS_MINUTE_HIGH, convertToHighMinuteDigit(a1.Minute()));
+                disp.showClockDigit(CS_MINUTE_LOW, convertToLowMinuteDigit(a1.Minute()));
+            }
+            break;
+        case SHOW_ALARM2:
+            Serial.println("Showing ALARM2");
+            {
+                DS3231AlarmTwo a2 = rtc.GetAlarmTwo();
+                disp.showClockDigit(CS_HOUR, convertToHourDigit(a2.Hour()));
+                disp.showClockDigit(CS_MINUTE_HIGH, convertToHighMinuteDigit(a2.Minute()));
+                disp.showClockDigit(CS_MINUTE_LOW, convertToLowMinuteDigit(a2.Minute()));
+            }
             break;
         case SET_TIME:
         case SET_ALARM1:
@@ -619,15 +656,22 @@ void triggerButtonsHeld(uint8_t buttons) {
                 settingHour = rtc.GetDateTime().Hour();
                 settingMinute = rtc.GetDateTime().Minute();
                 state = SET_TIME;
-            } else if (buttons & ClockButton::ALARM1) {
+            }
+            break;
+        case SHOW_ALARM1:
+            if (buttons & ClockButton::ALARM1) {
                 settingHour = rtc.GetAlarmOne().Hour();
                 settingMinute = rtc.GetAlarmOne().Minute();
                 state = SET_ALARM1;
-            } else if (buttons & ClockButton::ALARM2) {
+            }
+            break;
+        case SHOW_ALARM2:
+            if (buttons & ClockButton::ALARM2) {
                 settingHour = rtc.GetAlarmTwo().Hour();
                 settingMinute = rtc.GetAlarmTwo().Minute();
                 state = SET_ALARM2;
             }
+            break;
         case SET_HOUR:
         case SET_ALARM1_HOUR:
         case SET_ALARM2_HOUR:
