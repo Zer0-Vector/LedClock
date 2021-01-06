@@ -129,7 +129,7 @@ void setup() {
     disp.begin();
 
     Serial.println(F("setup done"));
-    // Serial.end();
+    Serial.end();
 }
 
 static unsigned long lastShowTime = millis();
@@ -425,6 +425,7 @@ void triggerButtonsUp(uint8_t buttons) {
             if (buttons & ClockButton::SET) {
                 state = SHOW_TIME;
                 saveAlarm1();
+                alarm1State = AlarmState::ALARM_ON;
                 break;
             }
             if (buttons & ClockButton::PLUS) {
@@ -455,6 +456,7 @@ void triggerButtonsUp(uint8_t buttons) {
             if (buttons & ClockButton::SET) {
                 state = SHOW_TIME;
                 saveAlarm2();
+                alarm2State = AlarmState::ALARM_ON;
                 break;
             }
             if (buttons & ClockButton::PLUS) {
