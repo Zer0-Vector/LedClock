@@ -1,0 +1,59 @@
+@startuml clock-mode-states
+
+state isValid <<choice>>
+state shouldHide <<choice>>
+
+state SET_ALARM1 {
+    state " " as setAlarm1Entry <<entrypoint>>
+    setAlarm1Entry --> SET_ALARM1_HOUR : up(ALARM1)
+    SET_ALARM1_HOUR --> SET_ALARM1_HOUR : downUp(PLUS|MINUS)
+    SET_ALARM1_HOUR --> SET_ALARM1_MINUTE : downUp(ALARM1|SET)
+    SET_ALARM1_MINUTE --> SET_ALARM1_MINUTE : downUp(PLUS|MINUS)
+}
+
+state SET_ALARM2 {
+    state " " as setAlarm2Entry <<entrypoint>>
+    setAlarm2Entry --> SET_ALARM2_HOUR : up(ALARM2)
+    SET_ALARM2_HOUR --> SET_ALARM2_HOUR : downUp(PLUS|MINUS)
+    SET_ALARM2_HOUR --> SET_ALARM2_MINUTE : downUp(ALARM2|SET)
+    SET_ALARM2_MINUTE --> SET_ALARM2_MINUTE : downUp(PLUS|MINUS)
+}
+
+state SET_TIME {
+    state " " as setTimeEntry <<entrypoint>>
+
+    setTimeEntry --> SET_HOUR : up(SET)
+    SET_HOUR --> SET_HOUR : downUp(PLUS|MINUS)
+    SET_HOUR --> SET_MINUTE : downUp(SET)
+    SET_MINUTE --> SET_MINUTE : downUp(PLUS|MINUS)
+}
+
+[*] --> isValid
+isValid --> SHOW_TIME : valid
+isValid --> INVALID_TIME : invalid
+INVALID_TIME --> INVALID_TIME : *
+INVALID_TIME --> setTimeEntry : held(SET)
+SET_MINUTE --> SHOW_TIME : downUp(SET)
+
+SHOW_TIME --> setTimeEntry : held(SET)
+SHOW_TIME --> SHOW_TIME : downUp(PLUS|MINUS)
+SHOW_TIME --> SHOW_TEMP : down(TEMP)
+SHOW_TEMP --> SHOW_TIME : up(TEMP)
+
+SHOW_TIME --> SHOW_ALARM1 : down(ALARM1)
+SHOW_ALARM1 --> SHOW_TIME : up(ALARM1)
+SHOW_ALARM1 --> setAlarm1Entry : held(ALARM1)
+SET_ALARM1_MINUTE --> SHOW_TIME : downUp(ALARM1|SET)
+
+SHOW_TIME --> SHOW_ALARM2 : down(ALARM2)
+SHOW_ALARM2 --> SHOW_TIME : up(ALARM2)
+SHOW_ALARM2 --> setAlarm2Entry : held(ALARM2)
+SET_ALARM2_MINUTE --> SHOW_TIME : downUp(ALARM2|SET)
+
+SHOW_TIME --> shouldHide : timeout(5sec)
+shouldHide --> HIDDEN_TIME : if(down(ALWAYSON))
+shouldHide --> SHOW_TIME : else
+HIDDEN_TIME --> SHOW_TIME : downUp(*)
+HIDDEN_TIME --> SHOW_TEMP : down(TEMP)
+
+@enduml
