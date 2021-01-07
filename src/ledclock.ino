@@ -144,6 +144,9 @@ static bool shownTime = false;
 
 volatile bool interruptFlag = false;
 
+static unsigned long lastToneTime = millis();
+static bool toneOn = false;
+
 void loop() {
     static uint8_t buttonsDown = 0x00;
 
@@ -167,8 +170,11 @@ void loop() {
         triggerButtonsHeld(buttonsHoldTrigger);
     }
 
+    toneOn = millis() - lastToneTime > ALARM_TONE_DELAY;
+
     // update display
     updateDisplay(buttonsDown & ClockButton::ALWAYSON);
+    updateIndicators();
 
     // handle alarm state
     checkAlarmState();
@@ -217,9 +223,8 @@ void checkAlarmState() {
     }
 }
 
-inline void soundAlarm() {
-    static unsigned long lastToneTime = millis();
-    if (millis() - lastToneTime > ALARM_TONE_DELAY) {
+void soundAlarm() {
+    if (toneOn) {
         Serial.println(F("ALARM silent"));
         noTone(POUT_ALARM_BUZZER);
         lastToneTime = millis();
@@ -229,7 +234,7 @@ inline void soundAlarm() {
     }
 }
 
-inline void silenceAlarm() {
+void silenceAlarm() {
     noTone(POUT_ALARM_BUZZER);
 }
 
@@ -562,6 +567,28 @@ void saveAlarm2() {
     rtc.SetAlarmTwo(alarmSetting);
 }
 
+void updateIndicators() {
+    digitalWrite(POUT_PM_LED, (rtc.GetDateTime().Hour() >= 12) ? HIGH : LOW);
+    updateAlarmLed(POUT_ALARM1_LED, alarm1State);
+    updateAlarmLed(POUT_ALARM2_LED, alarm2State);
+}
+
+void updateAlarmLed(uint8_t pin, AlarmState alarmState) {
+    switch (alarmState) {
+        case ALARM_OFF:
+            digitalWrite(pin, LOW);
+            break;
+        case ALARM_ON:
+        case ALARM_SNOOZE:
+            digitalWrite(pin, HIGH);
+            break;
+        case ALARM_TRIGGERED:
+            // blink with alarm buzzer pulse
+            digitalWrite(pin, toneOn ? HIGH : LOW);
+            break;
+    }
+}
+
 void updateDisplay(bool alwaysOn) {
     switch (state) {
         case HIDDEN_TIME:
@@ -577,6 +604,7 @@ void updateDisplay(bool alwaysOn) {
             Serial.println(alwaysOn);
             showTime();
             if (!shownTime || alwaysOn) {
+                // FIXME can this be moved near the state transition?
                 shownTime = true;
                 lastShowTime = millis();
             }
