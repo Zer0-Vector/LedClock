@@ -150,7 +150,7 @@ void loop() {
     uint8_t buttonsUp = queryButtonsState(&buttonsDown);
     uint8_t buttonsHoldTrigger = queryHoldState(buttonsDown);
 
-    if (buttonsDown > 0) {
+    if (buttonsDown & ~0x80 > 0) {
         Serial.print("down:");
         Serial.println(buttonsDown, BIN);
     }
@@ -165,17 +165,6 @@ void loop() {
         Serial.print("held:");
         Serial.println(buttonsHoldTrigger, BIN);
         triggerButtonsHeld(buttonsHoldTrigger);
-    }
-
-    // handle hide time conditions
-    if (state != HIDDEN_TIME && 
-        shownTime && 
-        !(buttonsDown & ClockButton::ALWAYSON) && 
-        millis() - lastShowTime > DISPLAY_TIMEOUT)
-    {
-        state = HIDDEN_TIME;
-    } else if (state == HIDDEN_TIME && (buttonsDown & ClockButton::ALWAYSON)) {
-        state = SHOW_TIME;
     }
 
     // update display
@@ -315,18 +304,33 @@ uint8_t queryButton(uint8_t pin, ClockButton button) {
 }
 
 void triggerButtonsDown(uint8_t buttons) {
-    if (buttons & ClockButton::TEMP) {
-        if (state == HIDDEN_TIME || state == SHOW_TIME) {
-            state = SHOW_TEMP;
-        }
-    } else if (buttons & ClockButton::ALARM1) {
-        if (state == SHOW_TIME) {
-            state = SHOW_ALARM1;
-        }
-    } else if (buttons & ClockButton::ALARM2) {
-        if (state == SHOW_TIME) {
-            state = SHOW_ALARM2;
-        }
+    switch (state) {
+        case SHOW_TIME:
+            if (buttons & ClockButton::TEMP) {
+                state = SHOW_TEMP;
+            } else if (buttons & ClockButton::ALARM1) {
+                state = SHOW_ALARM1;
+            } else if (buttons & ClockButton::ALARM2) {
+                state = SHOW_ALARM2;
+            } else if (
+                    !(buttons & ClockButton::ALWAYSON) 
+                    && shownTime 
+                    && millis() - lastShowTime > DISPLAY_TIMEOUT)
+            {
+                state = HIDDEN_TIME;
+            }
+            break;
+        case HIDDEN_TIME:
+            if (buttons & ClockButton::TEMP) {
+                state = SHOW_TEMP;
+            } else if (buttons & ClockButton::ALARM1) {
+                state = SHOW_ALARM1;
+            } else if (buttons & ClockButton::ALARM2) {
+                state = SHOW_ALARM2;
+            } else if (buttons & ClockButton::ALWAYSON) {
+                state = SHOW_TIME;
+            }
+            break;
     }
 }
 
@@ -567,6 +571,10 @@ void updateDisplay(bool alwaysOn) {
             disp.shutdown();
             break;
         case SHOW_TIME:
+            Serial.print(F("shownTime: "));
+            Serial.println(shownTime);
+            Serial.print(F("alwaysOn: "));
+            Serial.println(alwaysOn);
             showTime();
             if (!shownTime || alwaysOn) {
                 shownTime = true;
@@ -733,9 +741,14 @@ void showTime() {
     static uint8_t lastMinute = rtc.GetDateTime().Minute();
 
 
+    // regulate animation speed
     if (millis() - lastTimeUpdate < TIME_UPDATE_DELAY) {
         return;
     }
+
+    Serial.print(F("state: "));
+    Serial.println(state);
+
     lastTimeUpdate = millis();
     RtcDateTime now = rtc.GetDateTime();
     uint8_t hour = now.Hour();
